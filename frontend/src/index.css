@@ -174,6 +174,47 @@ p, span, div {
     box-shadow: inset 0 0 10px rgba(0, 255, 0, 0.5);
   }
 
+  /* Secondary Action Button (Amber Glow) */
+  .retro-button-secondary {
+    position: relative;
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    font-weight: normal;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'Courier New', monospace;
+    background: var(--retro-black);
+    color: var(--retro-amber);
+    border: 1px solid var(--retro-amber);
+    border-radius: 0;
+    box-shadow: 0 0 5px rgba(255, 176, 0, 0.3);
+    transform: translate(0, 0);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .retro-button-secondary:hover {
+    background: var(--retro-amber);
+    color: var(--retro-black);
+    box-shadow: 0 0 15px rgba(255, 176, 0, 0.5);
+  }
+
+  .retro-button-secondary:active {
+    background: var(--retro-dark-gray);
+    color: var(--retro-amber);
+    box-shadow: inset 0 0 10px rgba(255, 176, 0, 0.3);
+  }
+
+  .retro-button-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: var(--retro-dark-gray);
+    color: var(--retro-border);
+    border-color: var(--retro-border);
+    box-shadow: none;
+  }
+
   /* Terminal Panel Style */
   .terminal-panel {
     position: relative;
@@ -448,21 +489,56 @@ p, span, div {
   }
 }
 
-/* Custom scrollbar */
+/* Retro Color Utility Classes */
+@layer utilities {
+  .text-retro-green {
+    color: var(--retro-green) !important;
+  }
+  
+  .text-retro-amber {
+    color: var(--retro-amber) !important;
+  }
+  
+  .text-retro-red {
+    color: var(--retro-red) !important;
+  }
+  
+  .text-retro-off-white {
+    color: var(--retro-off-white) !important;
+  }
+  
+  .bg-retro-black {
+    background-color: var(--retro-black) !important;
+  }
+  
+  .border-retro-green {
+    border-color: var(--retro-green) !important;
+  }
+  
+  .border-retro-amber {
+    border-color: var(--retro-amber) !important;
+  }
+  
+  .border-retro-red {
+    border-color: var(--retro-red) !important;
+  }
+}
+
+/* Custom scrollbar - Retro Theme */
 ::-webkit-scrollbar {
   width: 12px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--light-gray);
-  border: 1px solid var(--charcoal);
+  background: var(--retro-black);
+  border: 1px solid var(--retro-border);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--sky-blue);
-  border: 1px solid var(--charcoal);
+  background: var(--retro-green);
+  border: 1px solid var(--retro-border);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--warm-red);
+  background: var(--retro-amber);
 }
