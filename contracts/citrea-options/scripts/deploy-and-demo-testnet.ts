@@ -4,6 +4,26 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import fs from "fs";
 import path from "path";
 
+// Helper function to get transaction receipt with retry for testnet
+async function getTransactionReceiptWithRetry(publicClient: any, hash: string, maxRetries: number = 5): Promise<any> {
+  let retries = 0;
+  
+  while (retries < maxRetries) {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds before checking
+      const receipt = await publicClient.getTransactionReceipt({ hash });
+      return receipt;
+    } catch (error) {
+      retries++;
+      console.log(`   Retry ${retries}/${maxRetries}: Waiting for transaction receipt...`);
+      if (retries >= maxRetries) {
+        throw error;
+      }
+      await new Promise(resolve => setTimeout(resolve, 15000)); // Wait 15 seconds between retries for testnet
+    }
+  }
+}
+
 // Determine if we're on testnet or local network
 function isTestnet(networkName: string): boolean {
   return networkName === "citrea" || networkName === "sepolia";
@@ -199,6 +219,9 @@ async function runLifecycleDemo(contracts: any, traders: any, isTestnetDeploymen
   const { stablecoin, wbtc, weth, layeredOptions } = contracts;
   const { trader1, trader2 } = traders;
 
+  const { viem } = await network.connect();
+  const publicClient = await viem.getPublicClient();
+
   console.log(`📋 Contract Addresses:
 💰 Stablecoin (USDC): ${stablecoin.address}
 ₿  WBTC: ${wbtc.address}
@@ -224,15 +247,15 @@ async function runLifecycleDemo(contracts: any, traders: any, isTestnetDeploymen
     console.log(`  WETH: ${Number(wethBalance) / 1e18}`);
   }
 
-  // ===== PHASE 2: PARENT OPTIONS CREATION =====
-  console.log("\n🎯 ===== PHASE 2: PARENT OPTIONS CREATION =====");
+  // ===== PHASE 2: REALISTIC OPTION TRADING =====
+  console.log("\n🎯 ===== PHASE 2: REALISTIC OPTION TRADING =====");
 
   const currentTime = BigInt(Math.floor(Date.now() / 1000));
   const expiry30Days = currentTime + 86400n * 30n;
   const expiry60Days = currentTime + 86400n * 60n;
 
-  // 1. Trader1 creates WBTC CALL option ($50,000 strike) - Premium in USDC
-  console.log("\n1️⃣ Trader1 creating WBTC CALL option ($50,000 strike)");
+  // Step 1: Trader1 creates WBTC CALL option ($50,000 strike) 
+  console.log("\n1️⃣ Trader1 creating WBTC CALL option for sale ($50,000 strike)");
   const btcCallStrike = BigInt("5000000000000"); // $50,000 (8 decimals)
   const btcCallPremium = BigInt("500000000"); // 500 USDC premium (6 decimals)
   
@@ -248,20 +271,57 @@ async function runLifecycleDemo(contracts: any, traders: any, isTestnetDeploymen
     account: isTestnetDeployment ? tempAccounts[0].account : trader1.account 
   });
   
-  console.log(`✅ Transaction: ${tx1}`);
+  console.log(`✅ CALL created: ${tx1}`);
   console.log(`   Strike: $${Number(btcCallStrike) / 1e8}`);
-  console.log(`   Premium: ${Number(btcCallPremium) / 1e6} USDC`);
-  console.log(`   Token ID: 1`);
+  console.log(`   Premium Required: ${Number(btcCallPremium) / 1e6} USDC`);
+  console.log(`   Token ID: 1 (owned by Trader1)`);
   
-  transactions.push({
-    phase: "Parent Options",
-    trader: "Trader1",
-    action: "Create WBTC CALL",
-    strike: "$50,000",
-    premium: "500 USDC",
-    tokenId: 1,
-    tx: tx1
+  // Wait for transaction receipt with retry logic for testnet
+  if (isTestnetDeployment) {
+    console.log("   Waiting for transaction receipt...");
+    try {
+      await getTransactionReceiptWithRetry(publicClient, tx1);
+      console.log("   ✅ Transaction confirmed");
+    } catch (error) {
+      console.log("   ⚠️ Receipt retrieval failed, but continuing...");
+    }
+  }
+
+  if (isTestnetDeployment) {
+    console.log("   Waiting 15 seconds before next transaction...");
+    await new Promise(resolve => setTimeout(resolve, 15000));
+  }
+
+  // Step 2: Trader2 purchases the CALL option from Trader1 (paying premium)
+  console.log("\n2️⃣ Trader2 purchasing CALL option from Trader1 (paying 500 USDC premium)");
+  
+  const purchaseTx1 = await layeredOptions.write.safeTransferFrom([
+    isTestnetDeployment ? tempAccounts[0].account.address : trader1.account.address, // from Trader1
+    isTestnetDeployment ? tempAccounts[1].account.address : trader2.account.address, // to Trader2
+    1n, // token ID
+    1n, // amount
+    "0x" // data
+  ], { 
+    account: isTestnetDeployment ? tempAccounts[0].account : trader1.account 
   });
+
+  // Also transfer the premium payment from Trader2 to Trader1
+  const premiumTx1 = await stablecoin.write.transfer([
+    isTestnetDeployment ? tempAccounts[0].account.address : trader1.account.address, // to Trader1
+    btcCallPremium // 500 USDC
+  ], { 
+    account: isTestnetDeployment ? tempAccounts[1].account : trader2.account 
+  });
+
+  console.log(`✅ Option transferred: ${purchaseTx1}`);
+  console.log(`✅ Premium paid: ${premiumTx1}`);
+  console.log(`   💰 Trader1 earned: ${Number(btcCallPremium) / 1e6} USDC`);
+  console.log(`   📈 Trader2 now owns: WBTC CALL Token ID 1`);
+
+  if (isTestnetDeployment) {
+    console.log("   Waiting 15 seconds before next step...");
+    await new Promise(resolve => setTimeout(resolve, 15000));
+  }
 
   // 2. Trader2 creates WBTC PUT option ($40,000 strike) - Premium in USDC
   console.log("\n2️⃣ Trader2 creating WBTC PUT option ($40,000 strike)");
@@ -284,6 +344,17 @@ async function runLifecycleDemo(contracts: any, traders: any, isTestnetDeploymen
   console.log(`   Strike: $${Number(btcPutStrike) / 1e8}`);
   console.log(`   Premium: ${Number(btcPutPremium) / 1e6} USDC`);
   console.log(`   Token ID: 2`);
+  
+  // Wait for transaction receipt with retry logic for testnet
+  if (isTestnetDeployment) {
+    console.log("   Waiting for transaction receipt...");
+    try {
+      await getTransactionReceiptWithRetry(publicClient, tx2);
+      console.log("   ✅ Transaction confirmed");
+    } catch (error) {
+      console.log("   ⚠️ Receipt retrieval failed, but continuing...");
+    }
+  }
   
   transactions.push({
     phase: "Parent Options",
