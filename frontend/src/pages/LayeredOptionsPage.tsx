@@ -15,10 +15,12 @@ import {
   useCapitalEfficiencyStats
 } from '../services/layeredOptionsAPI';
 import { CONTRACT_ADDRESSES, OptionType } from '../contracts/config';
+import PriceUpdateComponent from '../components/PriceUpdateComponent';
+import TimeManipulationComponent from '../components/TimeManipulationComponent';
 
 const LayeredOptionsPage = () => {
   const { address, isConnected } = useAccount();
-  const [selectedTab, setSelectedTab] = useState<'create' | 'manage' | 'exercise' | 'browse'>('create');
+  const [selectedTab, setSelectedTab] = useState<'create' | 'manage' | 'exercise' | 'browse' | 'demo'>('create');
   const [selectedTokenId, setSelectedTokenId] = useState<number>(1);
   const [viewTokenId, setViewTokenId] = useState<number>(1);
   
@@ -84,6 +86,35 @@ const LayeredOptionsPage = () => {
     }
   };
 
+  // Smart UI: Handle option type change
+  const handleOptionTypeChange = (optionType: OptionType) => {
+    const newForm = { ...createForm, optionType };
+    
+    // Auto-update base asset for PUT options
+    if (optionType === OptionType.PUT) {
+      newForm.baseAsset = CONTRACT_ADDRESSES.STABLECOIN; // USDC for PUT
+    } else {
+      newForm.baseAsset = CONTRACT_ADDRESSES.MOCK_WBTC; // WBTC for CALL
+    }
+    
+    setCreateForm(newForm);
+  };
+
+  // Smart UI: Auto-fill child form based on parent data
+  const handleParentIdChange = (parentId: number) => {
+    const newChildForm = { ...childForm, parentId };
+    
+    // TODO: Fetch parent option data and auto-fill fields
+    // For now, set some default values based on parent
+    if (parentId > 0) {
+      // These would be fetched from the parent option in a real implementation
+      newChildForm.optionType = OptionType.CALL; // Default, should be from parent
+      newChildForm.expirationDays = 15; // Half the parent's expiration
+    }
+    
+    setChildForm(newChildForm);
+  };
+
   const handleCreateChild = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isConnected) return;
@@ -126,6 +157,17 @@ const LayeredOptionsPage = () => {
     }
   };
 
+  const handleMintUSDC = async () => {
+    if (!isConnected) return;
+
+    try {
+      // Mint 10,000 USDC (6 decimals)
+      await mintTestTokens(CONTRACT_ADDRESSES.STABLECOIN, '10000');
+    } catch (error) {
+      console.error('Failed to mint USDC:', error);
+    }
+  };
+
   const handleAddSupportedAsset = async () => {
     if (!isConnected) return;
 
@@ -138,44 +180,51 @@ const LayeredOptionsPage = () => {
 
   return (
     <div
-      className="h-screen w-screen overflow-auto"
+      className="min-h-screen w-full"
       style={{
-        background:
-          "linear-gradient(180deg, var(--sky-blue) 0%, var(--light-green) 50%, var(--cream) 100%)",
+        background: "var(--retro-black)",
+        color: "var(--retro-off-white)",
       }}
     >
       <Navigation />
 
       <div className="px-6 py-8">
-        <div className="max-w-6xl mx-auto">
-          {/* Page Title */}
+        <div className="max-w-6xl mx-auto">{/* Page Title */}
           <div className="text-center mb-8">
             <h1
-              className="text-4xl md:text-6xl mb-4"
-              style={{ color: "var(--charcoal)" }}
+              className="text-4xl md:text-6xl mb-4 font-mono uppercase tracking-wider"
+              style={{ 
+                color: "var(--retro-white)",
+                textShadow: "0 0 20px var(--retro-glow)"
+              }}
             >
               LAYERED OPTIONS
             </h1>
-            <p className="text-xl mb-4" style={{ color: "var(--charcoal)" }}>
-              Revolutionary Capital-Efficient Options on Citrea
+            <p className="text-xl mb-4 font-mono" style={{ color: "var(--retro-green)" }}>
+              &gt; REVOLUTIONARY CAPITAL-EFFICIENT OPTIONS ON CITREA
             </p>
-            <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 max-w-2xl mx-auto">
-              <p className="text-lg font-semibold mb-2">💡 What are Layered Options?</p>
-              <p className="text-sm">
-                Create parent options that can spawn multiple child options, reducing collateral requirements by 65-85% 
-                compared to traditional options while maintaining full functionality.
+            <div className="terminal-panel max-w-2xl mx-auto">
+              <p className="text-lg font-semibold mb-2" style={{ color: "var(--retro-amber)" }}>
+                [INFO] WHAT ARE LAYERED OPTIONS?
+              </p>
+              <p className="text-sm font-mono leading-relaxed">
+                CREATE PARENT OPTIONS THAT SPAWN MULTIPLE CHILD OPTIONS,
+                <br />
+                REDUCING COLLATERAL REQUIREMENTS BY 65-85% VS TRADITIONAL.
+                <br />
+                FULL FUNCTIONALITY. MAXIMUM EFFICIENCY.
               </p>
             </div>
           </div>
 
           {!isConnected && (
             <div className="text-center mb-8">
-              <div className="bg-yellow-100/80 backdrop-blur-sm rounded-xl p-6">
-                <p className="text-lg font-semibold text-yellow-800 mb-2">
-                  🔗 Connect Your Wallet
+              <div className="terminal-window">
+                <p className="text-lg font-semibold mb-2" style={{ color: "var(--retro-amber)" }}>
+                  [WARNING] WALLET NOT CONNECTED
                 </p>
-                <p className="text-yellow-700">
-                  Please connect your wallet to interact with Layered Options
+                <p style={{ color: "var(--retro-off-white)" }}>
+                  PLEASE CONNECT YOUR WALLET TO ACCESS LAYERED OPTIONS SYSTEM
                 </p>
               </div>
             </div>
@@ -183,18 +232,22 @@ const LayeredOptionsPage = () => {
 
           {/* Tab Navigation */}
           <div className="flex justify-center mb-8">
-            <div className="bg-white/20 backdrop-blur-sm rounded-xl p-2 flex gap-2">
-              {(['create', 'manage', 'exercise', 'browse'] as const).map((tab) => (
+            <div className="terminal-panel flex gap-2">
+              {(['create', 'manage', 'exercise', 'browse', 'demo'] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setSelectedTab(tab)}
-                  className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                  className={`px-6 py-3 font-mono text-sm transition-all border ${
                     selectedTab === tab
-                      ? 'bg-white text-gray-800 shadow-lg'
-                      : 'text-gray-700 hover:bg-white/30'
+                      ? 'retro-button-primary'
+                      : 'retro-button'
                   }`}
+                  style={{
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px'
+                  }}
                 >
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  {tab === 'demo' ? '[DEMO]' : `[${tab.toUpperCase()}]`}
                 </button>
               ))}
             </div>
@@ -204,149 +257,285 @@ const LayeredOptionsPage = () => {
           {selectedTab === 'create' && (
             <div className="grid md:grid-cols-2 gap-8">
               {/* Create Parent Option */}
-              <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6">
-                <h3 className="text-2xl font-bold mb-4" style={{ color: "var(--charcoal)" }}>
-                  Create Parent Option
+              <div className="terminal-panel">
+                <h3 className="text-2xl font-mono font-bold mb-4 uppercase tracking-wider" 
+                    style={{ color: "var(--retro-green)" }}>
+                  [CREATE PARENT OPTION]
                 </h3>
                 <form onSubmit={handleCreateOption} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Base Asset</label>
+                    <label className="block text-sm font-mono mb-2 uppercase tracking-wide" 
+                           style={{ color: "var(--retro-amber)" }}>
+                      Option Type
+                    </label>
+                    <select
+                      value={createForm.optionType}
+                      onChange={(e) => handleOptionTypeChange(parseInt(e.target.value) as OptionType)}
+                      className="retro-input w-full px-4 py-3 font-mono"
+                      style={{
+                        background: "var(--retro-dark-gray)",
+                        color: "var(--retro-off-white)",
+                        border: "1px solid var(--retro-border)"
+                      }}
+                    >
+                      <option value={OptionType.CALL}>CALL OPTION</option>
+                      <option value={OptionType.PUT}>PUT OPTION</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-mono mb-2 uppercase tracking-wide" 
+                           style={{ color: "var(--retro-amber)" }}>
+                      Base Asset
+                    </label>
                     <select
                       value={createForm.baseAsset}
                       onChange={(e) => setCreateForm({ ...createForm, baseAsset: e.target.value })}
-                      className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white"
+                      className="retro-input w-full px-4 py-3 font-mono"
+                      style={{
+                        background: "var(--retro-dark-gray)",
+                        color: "var(--retro-off-white)",
+                        border: "1px solid var(--retro-border)"
+                      }}
+                      disabled={createForm.optionType === OptionType.PUT} // Auto-managed for PUT
                     >
-                      <option value={CONTRACT_ADDRESSES.MOCK_WBTC}>Mock WBTC</option>
+                      {createForm.optionType === OptionType.CALL ? (
+                        <>
+                          <option value={CONTRACT_ADDRESSES.MOCK_WBTC}>WBTC</option>
+                          <option value={CONTRACT_ADDRESSES.MOCK_WETH}>WETH</option>
+                        </>
+                      ) : (
+                        <option value={CONTRACT_ADDRESSES.STABLECOIN}>USDC</option>
+                      )}
                     </select>
                   </div>
+
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Strike Price ($)</label>
+                    <label className="block text-sm font-mono mb-2 uppercase tracking-wide" 
+                           style={{ color: "var(--retro-amber)" }}>
+                      Strike Price (USD)
+                    </label>
                     <input
                       type="number"
                       value={createForm.strikePrice}
                       onChange={(e) => setCreateForm({ ...createForm, strikePrice: e.target.value })}
-                      className="w-full px-4 py-3 rounded-lg border border-gray-300"
+                      className="retro-input w-full px-4 py-3 font-mono"
+                      style={{
+                        background: "var(--retro-dark-gray)",
+                        color: "var(--retro-off-white)",
+                        border: "1px solid var(--retro-border)"
+                      }}
                       placeholder="45000"
                     />
                   </div>
+
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Expiration (days)</label>
+                    <label className="block text-sm font-mono mb-2 uppercase tracking-wide" 
+                           style={{ color: "var(--retro-amber)" }}>
+                      Expiration (days)
+                    </label>
                     <input
                       type="number"
                       value={createForm.expirationDays}
                       onChange={(e) => setCreateForm({ ...createForm, expirationDays: parseInt(e.target.value) })}
-                      className="w-full px-4 py-3 rounded-lg border border-gray-300"
+                      className="retro-input w-full px-4 py-3 font-mono"
+                      style={{
+                        background: "var(--retro-dark-gray)",
+                        color: "var(--retro-off-white)",
+                        border: "1px solid var(--retro-border)"
+                      }}
                       placeholder="30"
                     />
                   </div>
+
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Premium (cBTC)</label>
+                    <label className="block text-sm font-mono mb-2 uppercase tracking-wide" 
+                           style={{ color: "var(--retro-amber)" }}>
+                      Premium Amount (USDC)
+                    </label>
                     <input
                       type="text"
                       value={createForm.premium}
                       onChange={(e) => setCreateForm({ ...createForm, premium: e.target.value })}
-                      className="w-full px-4 py-3 rounded-lg border border-gray-300"
-                      placeholder="0.001"
+                      className="retro-input w-full px-4 py-3 font-mono"
+                      style={{
+                        background: "var(--retro-dark-gray)",
+                        color: "var(--retro-off-white)",
+                        border: "1px solid var(--retro-border)"
+                      }}
+                      placeholder="1000"
                     />
+                    <p className="text-xs mt-1 font-mono" style={{ color: "var(--retro-green)" }}>
+                      PREMIUMS ARE ALWAYS IN USDC FOR SIMPLICITY
+                    </p>
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold mb-2">Option Type</label>
-                    <select
-                      value={createForm.optionType}
-                      onChange={(e) => setCreateForm({ ...createForm, optionType: parseInt(e.target.value) as OptionType })}
-                      className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white"
-                    >
-                      <option value={OptionType.CALL}>Call Option</option>
-                      <option value={OptionType.PUT}>Put Option</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold mb-2">Premium Payment Token</label>
-                    <select
-                      value={createForm.premiumToken}
-                      onChange={(e) => setCreateForm({ ...createForm, premiumToken: e.target.value })}
-                      className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white"
-                    >
-                      <option value="0x0000000000000000000000000000000000000000">cBTC (Native)</option>
-                      <option value={CONTRACT_ADDRESSES.STABLECOIN}>USDC (Stablecoin)</option>
-                    </select>
-                  </div>
+
                   <button
                     type="submit"
                     disabled={!isConnected || isCreating}
-                    className="w-full py-3 px-6 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                    className="retro-button-primary w-full py-3 px-6 font-mono"
                   >
-                    {isCreating ? 'Creating...' : 'Create Parent Option'}
+                    {isCreating ? 'CREATING...' : 'CREATE PARENT OPTION'}
                   </button>
+                  
                   {createHash && (
-                    <p className="text-sm text-green-600 break-all">
-                      Transaction: {createHash}
-                    </p>
+                    <div className="terminal-window p-2">
+                      <p className="text-xs font-mono break-all" style={{ color: "var(--retro-green)" }}>
+                        TX: {createHash}
+                      </p>
+                    </div>
                   )}
                 </form>
               </div>
 
               {/* Create Child Option */}
-              <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6">
-                <h3 className="text-2xl font-bold mb-4" style={{ color: "var(--charcoal)" }}>
-                  Create Child Option
+              <div className="terminal-panel">
+                <h3 className="text-2xl font-mono font-bold mb-4 uppercase tracking-wider" 
+                    style={{ color: "var(--retro-amber)" }}>
+                  [CREATE CHILD OPTION]
                 </h3>
                 <form onSubmit={handleCreateChild} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Parent Option ID</label>
+                    <label className="block text-sm font-mono mb-2 uppercase tracking-wide" 
+                           style={{ color: "var(--retro-amber)" }}>
+                      Parent Option ID
+                    </label>
                     <input
                       type="number"
                       value={childForm.parentId}
-                      onChange={(e) => setChildForm({ ...childForm, parentId: parseInt(e.target.value) })}
-                      className="w-full px-4 py-3 rounded-lg border border-gray-300"
+                      onChange={(e) => handleParentIdChange(parseInt(e.target.value))}
+                      className="retro-input w-full px-4 py-3 font-mono"
+                      style={{
+                        background: "var(--retro-dark-gray)",
+                        color: "var(--retro-off-white)",
+                        border: "1px solid var(--retro-border)"
+                      }}
                       placeholder="1"
                     />
+                    <p className="text-xs mt-1 font-mono" style={{ color: "var(--retro-green)" }}>
+                      OTHER FIELDS AUTO-FILLED FROM PARENT DATA
+                    </p>
                   </div>
+
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Child Strike Price ($)</label>
+                    <label className="block text-sm font-mono mb-2 uppercase tracking-wide" 
+                           style={{ color: "var(--retro-amber)" }}>
+                      Child Strike Price (USD)
+                    </label>
                     <input
                       type="number"
                       value={childForm.strikePrice}
                       onChange={(e) => setChildForm({ ...childForm, strikePrice: e.target.value })}
-                      className="w-full px-4 py-3 rounded-lg border border-gray-300"
+                      className="retro-input w-full px-4 py-3 font-mono"
+                      style={{
+                        background: "var(--retro-dark-gray)",
+                        color: "var(--retro-off-white)",
+                        border: "1px solid var(--retro-border)"
+                      }}
                       placeholder="46000"
                     />
                   </div>
+
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Child Expiration (days)</label>
+                    <label className="block text-sm font-mono mb-2 uppercase tracking-wide" 
+                           style={{ color: "var(--retro-amber)" }}>
+                      Child Expiration (days)
+                    </label>
                     <input
                       type="number"
                       value={childForm.expirationDays}
                       onChange={(e) => setChildForm({ ...childForm, expirationDays: parseInt(e.target.value) })}
-                      className="w-full px-4 py-3 rounded-lg border border-gray-300"
+                      className="retro-input w-full px-4 py-3 font-mono"
+                      style={{
+                        background: "var(--retro-dark-gray)",
+                        color: "var(--retro-off-white)",
+                        border: "1px solid var(--retro-border)"
+                      }}
                       placeholder="15"
                     />
+                    <p className="text-xs mt-1 font-mono" style={{ color: "var(--retro-green)" }}>
+                      MUST BE ≤ PARENT EXPIRATION
+                    </p>
                   </div>
+
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Option Type</label>
+                    <label className="block text-sm font-mono mb-2 uppercase tracking-wide" 
+                           style={{ color: "var(--retro-amber)" }}>
+                      Child Option Type
+                    </label>
                     <select
                       value={childForm.optionType}
                       onChange={(e) => setChildForm({ ...childForm, optionType: parseInt(e.target.value) as OptionType })}
-                      className="w-full px-4 py-3 rounded-lg border border-gray-300"
+                      className="retro-input w-full px-4 py-3 font-mono"
+                      style={{
+                        background: "var(--retro-dark-gray)",
+                        color: "var(--retro-off-white)",
+                        border: "1px solid var(--retro-border)"
+                      }}
+                      disabled // Auto-filled from parent
                     >
-                      <option value={OptionType.CALL}>Call Option</option>
-                      <option value={OptionType.PUT}>Put Option</option>
+                      <option value={OptionType.CALL}>CALL OPTION</option>
+                      <option value={OptionType.PUT}>PUT OPTION</option>
                     </select>
+                    <p className="text-xs mt-1 font-mono" style={{ color: "var(--retro-green)" }}>
+                      AUTO-FILLED FROM PARENT OPTION
+                    </p>
                   </div>
-                  <p className="text-sm text-gray-600">* Premium will be automatically calculated as half of the parent option premium</p>
+
                   <button
                     type="submit"
                     disabled={!isConnected || isCreatingChild}
-                    className="w-full py-3 px-6 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                    className="retro-button-primary w-full py-3 px-6 font-mono"
                   >
-                    {isCreatingChild ? 'Creating...' : 'Create Child Option'}
+                    {isCreatingChild ? 'CREATING...' : 'CREATE CHILD OPTION'}
                   </button>
-                  {createChildHash && (
-                    <p className="text-sm text-green-600 break-all">
-                      Transaction: {createChildHash}
-                    </p>
+                  
+                  {childHash && (
+                    <div className="terminal-window p-2">
+                      <p className="text-xs font-mono break-all" style={{ color: "var(--retro-green)" }}>
+                        TX: {childHash}
+                      </p>
+                    </div>
                   )}
                 </form>
+              </div>
+            </div>
+          )}
+
+          {/* Token Minting Section */}
+          {selectedTab === 'create' && (
+            <div className="mt-8">
+              <div className="terminal-panel">
+                <h3 className="text-xl font-mono font-bold mb-4 uppercase tracking-wider" 
+                    style={{ color: "var(--retro-amber)" }}>
+                  [TOKEN MINTING UTILITIES]
+                </h3>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <button
+                    onClick={handleMintUSDC}
+                    disabled={!isConnected}
+                    className="retro-button w-full py-3 px-4 font-mono text-sm"
+                  >
+                    MINT 10K USDC
+                  </button>
+                  <button
+                    onClick={handleMintTestTokens}
+                    disabled={!isConnected}
+                    className="retro-button w-full py-3 px-4 font-mono text-sm"
+                  >
+                    MINT 10 WBTC
+                  </button>
+                  <button
+                    onClick={handleAddSupportedAsset}
+                    disabled={!isConnected}
+                    className="retro-button w-full py-3 px-4 font-mono text-sm"
+                  >
+                    ADD WBTC SUPPORT
+                  </button>
+                </div>
+                <p className="text-xs mt-2 font-mono text-center" style={{ color: "var(--retro-green)" }}>
+                  MINT TOKENS FOR TESTING - THESE ARE MOCK TOKENS
+                </p>
               </div>
             </div>
           )}
@@ -672,6 +861,66 @@ const LayeredOptionsPage = () => {
                   )}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Demo Tab */}
+          {selectedTab === 'demo' && (
+            <div className="space-y-8">
+              <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6">
+                <h3 className="text-2xl font-bold mb-4" style={{ color: "var(--charcoal)" }}>
+                  🎮 Demo Controls
+                </h3>
+                <p className="text-gray-700 mb-6">
+                  Use these controls to manipulate prices and time for testing options behavior. 
+                  These tools help demonstrate how options react to price movements and time decay.
+                </p>
+                
+                <div className="grid md:grid-cols-2 gap-8">
+                  {/* Price Update Component */}
+                  <div>
+                    <PriceUpdateComponent />
+                  </div>
+                  
+                  {/* Time Manipulation Component */}
+                  <div>
+                    <TimeManipulationComponent />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Demo Instructions */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6">
+                <h4 className="text-xl font-bold mb-4 text-indigo-800">📚 Demo Instructions</h4>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <h5 className="font-semibold mb-2 text-indigo-700">Price Manipulation</h5>
+                    <ul className="text-sm space-y-1 text-gray-700">
+                      <li>• Update BTC and ETH prices via oracle contracts</li>
+                      <li>• Test how price changes affect option values</li>
+                      <li>• Use quick scenarios for common market movements</li>
+                      <li>• Prices update immediately and affect all calculations</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 className="font-semibold mb-2 text-indigo-700">Time Manipulation</h5>
+                    <ul className="text-sm space-y-1 text-gray-700">
+                      <li>• Fast-forward time to test option expiry</li>
+                      <li>• Set specific dates for testing scenarios</li>
+                      <li>• Observe time decay effects on premiums</li>
+                      <li>• Test exercise behavior near expiration</li>
+                    </ul>
+                  </div>
+                </div>
+                
+                <div className="mt-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <p className="text-sm text-yellow-800">
+                    <strong>💡 Pro Tip:</strong> Create options with different strikes and expirations, 
+                    then use these controls to simulate various market conditions and see how layered options 
+                    maintain capital efficiency while providing full functionality.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 

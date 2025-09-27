@@ -11,8 +11,8 @@ const citreaTestnet = {
   blockExplorers: { default: { name: 'Explorer', url: 'https://explorer.testnet.citrea.xyz' } },
 };
 
-// Contract configuration
-const LAYERED_OPTIONS_ADDRESS = '0x5159326b4faf867eb45c324842e77543a8eae63d';
+// Contract configuration - Updated for Citrea testnet deployment
+const LAYERED_OPTIONS_ADDRESS = '0xcd9948d810c4e8c2144c4e2fb84786502e6bedc8';
 
 // Events to track
 const EVENTS = {

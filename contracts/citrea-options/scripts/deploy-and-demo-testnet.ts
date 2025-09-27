@@ -52,11 +52,19 @@ async function deployContracts(isTestnetDeployment: boolean = false) {
   let tempAccounts: any[] = [];
   
   if (isTestnetDeployment) {
-    // On testnet, use main account as deployer and create temporary accounts
+    // On testnet, use main account for all operations to conserve funds
     const walletClients = await viem.getWalletClients();
     deployer = walletClients[0];
+    trader1 = deployer; // Use same account for demo
+    trader2 = deployer; // Use same account for demo
     
-    console.log("🔧 Creating temporary accounts for testnet demo...");
+    console.log("� Using main deployer account for all operations to conserve testnet funds");
+    
+  } else {
+    // On local network, use default accounts and create temporary accounts for demo
+    [deployer, trader1, trader2] = await viem.getWalletClients();
+    
+    console.log("🔧 Creating temporary accounts for local demo...");
     tempAccounts = createTemporaryAccounts(2);
     
     // Create wallet clients for temporary accounts
@@ -75,10 +83,6 @@ async function deployContracts(isTestnetDeployment: boolean = false) {
     console.log(`🔑 Temporary accounts created:
   Trader1: ${tempAccounts[0].address}
   Trader2: ${tempAccounts[1].address}`);
-    
-  } else {
-    // On local network, use default accounts
-    [deployer, trader1, trader2] = await viem.getWalletClients();
   }
 
   const publicClient = await viem.getPublicClient();
@@ -87,10 +91,10 @@ async function deployContracts(isTestnetDeployment: boolean = false) {
   const balance = await publicClient.getBalance({ address: deployer.account.address });
   console.log(`💰 Deployer balance: ${formatEther(balance)} ETH`);
 
-  // Fund temporary accounts on testnet
-  if (isTestnetDeployment && tempAccounts.length > 0) {
+  // Fund temporary accounts only on local network
+  if (!isTestnetDeployment && tempAccounts.length > 0) {
     console.log("\n💸 Funding temporary accounts...");
-    const fundingAmount = parseEther("0.05"); // 0.05 ETH per account
+    const fundingAmount = parseEther("0.01"); // 0.01 ETH per account
     
     for (let i = 0; i < tempAccounts.length; i++) {
       const account = tempAccounts[i];
@@ -142,42 +146,80 @@ async function deployContracts(isTestnetDeployment: boolean = false) {
   ]);
   console.log(`✅ WETH deployed at: ${weth.address}`);
 
-  // ===== 3. DEPLOY MAIN CONTRACT =====
-  console.log("\n3️⃣ Deploying CitreaLayeredOptionsTrading...");
+  // ===== 3. DEPLOY ORACLE CONTRACTS =====
+  console.log("\n3️⃣ Deploying Oracle Contracts...");
+  
+  const timeOracle = await viem.deployContract("TimeOracle", [
+    deployer.account.address    // owner
+  ]);
+  console.log(`✅ TimeOracle deployed at: ${timeOracle.address}`);
+  
+  // Deploy MockPriceFeed for WBTC
+  const btcPriceFeed = await viem.deployContract("MockPriceFeed", [
+    "BTC/USD Price Feed",       // description
+    8,                          // decimals (BTC price feed uses 8 decimals)
+    100000000n * 92000n,        // initial price: $92,000 BTC (8 decimals)
+    deployer.account.address    // owner
+  ]);
+  console.log(`✅ BTC Price Feed deployed at: ${btcPriceFeed.address}`);
+  
+  // Deploy MockPriceFeed for WETH
+  const ethPriceFeed = await viem.deployContract("MockPriceFeed", [
+    "ETH/USD Price Feed",       // description
+    8,                          // decimals  
+    100000000n * 2500n,         // initial price: $2,500 ETH (8 decimals)
+    deployer.account.address    // owner
+  ]);
+  console.log(`✅ ETH Price Feed deployed at: ${ethPriceFeed.address}`);
+
+  // ===== 4. DEPLOY MAIN CONTRACT =====
+  console.log("\n4️⃣ Deploying CitreaLayeredOptionsTrading...");
   const layeredOptions = await viem.deployContract("CitreaLayeredOptionsTrading", [
     deployer.account.address,    // owner
-    stablecoin.address          // stablecoin for child premiums
+    stablecoin.address,         // stablecoin for child premiums
+    timeOracle.address          // time oracle
   ]);
   console.log(`✅ LayeredOptions deployed at: ${layeredOptions.address}`);
 
-  // ===== 4. INITIALIZE CONTRACTS =====
-  console.log("\n4️⃣ Initializing Contracts...");
+  // ===== 5. INITIALIZE CONTRACTS =====
+  console.log("\n5️⃣ Initializing Contracts...");
   
   // Add supported assets (focus on WBTC for demo)
   await layeredOptions.write.addSupportedAsset([wbtc.address]);
   await layeredOptions.write.addSupportedAsset([weth.address]); // Keep for contract completeness
-  console.log("✅ Assets added and contracts initialized");
+  
+  // Set price feeds
+  await layeredOptions.write.setPriceFeed([wbtc.address, btcPriceFeed.address]);
+  await layeredOptions.write.setPriceFeed([weth.address, ethPriceFeed.address]);
+  
+  console.log("✅ Assets added, price feeds configured, and contracts initialized");
 
   // ===== 5. SETUP DEMO ACCOUNTS =====
   console.log("\n5️⃣ Setting up Demo Accounts...");
   
-  const traders = [trader1, trader2];
-  const usdcAmount = BigInt("100000000000");    // 100K USDC (6 decimals)
-  const wbtcAmount = BigInt("1000000000");      // 10 WBTC (8 decimals)
-  const wethAmount = BigInt("100000000000000000000"); // 100 WETH (18 decimals)
-  
-  for (let i = 0; i < traders.length; i++) {
-    const trader = traders[i];
-    console.log(`  Setting up Trader ${i + 1}: ${trader.account.address.slice(0, 10)}...`);
+  if (isTestnetDeployment) {
+    console.log("🔄 Using deployer account for all demo operations (testnet)");
+    // Set approvals for the single account
+    await stablecoin.write.approve([layeredOptions.address, BigInt("100000000000")]);
+    await wbtc.write.approve([layeredOptions.address, BigInt("1000000000")]);
+    await weth.write.approve([layeredOptions.address, BigInt("100000000000000000000")]);
+  } else {
+    // Local network setup with multiple traders
+    const traders = [trader1, trader2];
+    const usdcAmount = BigInt("100000000000");    // 100K USDC (6 decimals)
+    const wbtcAmount = BigInt("1000000000");      // 10 WBTC (8 decimals)
+    const wethAmount = BigInt("100000000000000000000"); // 100 WETH (18 decimals)
     
-    // Mint tokens to trader accounts
-    await stablecoin.write.mint([trader.account.address, usdcAmount]);
-    await wbtc.write.mint([trader.account.address, wbtcAmount]);
-    await weth.write.mint([trader.account.address, wethAmount]);
-    
-    // Set approvals (traders approve the contract to spend their tokens)
-    if (isTestnetDeployment) {
-      // For testnet, we need to use the temporary account's wallet client
+    for (let i = 0; i < traders.length; i++) {
+      const trader = traders[i];
+      console.log(`  Setting up Trader ${i + 1}: ${trader.account.address.slice(0, 10)}...`);
+      
+      // Mint tokens to trader accounts
+      await stablecoin.write.mint([trader.account.address, usdcAmount]);
+      await wbtc.write.mint([trader.account.address, wbtcAmount]);
+      await weth.write.mint([trader.account.address, wethAmount]);
+      
+      // For local network, use the temporary account's wallet client
       const traderStablecoin = await viem.getContractAt("MockERC20", stablecoin.address);
       const traderWbtc = await viem.getContractAt("MockERC20", wbtc.address);
       const traderWeth = await viem.getContractAt("MockERC20", weth.address);
@@ -190,17 +232,6 @@ async function deployContracts(isTestnetDeployment: boolean = false) {
       });
       await traderWeth.write.approve([layeredOptions.address, wethAmount], {
         account: tempAccounts[i].account
-      });
-    } else {
-      // For local network, use the trader's wallet client directly
-      await stablecoin.write.approve([layeredOptions.address, usdcAmount], {
-        account: trader.account
-      });
-      await wbtc.write.approve([layeredOptions.address, wbtcAmount], {
-        account: trader.account
-      });
-      await weth.write.approve([layeredOptions.address, wethAmount], {
-        account: trader.account
       });
     }
   }
@@ -371,8 +402,8 @@ async function runLifecycleDemo(contracts: any, traders: any, isTestnetDeploymen
 
   const childExpiry = currentTime + 86400n * 20n; // 20 days
 
-  // 1. Trader1 creates child CALL from WBTC CALL (higher strike)
-  console.log("\n1️⃣ Trader1 creating child CALL ($52,000 strike from $50,000 parent)");
+  // 1. Trader2 creates child CALL from WBTC CALL (higher strike)
+  console.log("\n1️⃣ Trader2 creating child CALL ($52,000 strike from $50,000 parent)");
   const btcChildCallStrike = BigInt("5200000000000"); // $52,000 (higher than parent)
   
   // First, calculate the expected premium
@@ -389,7 +420,7 @@ async function runLifecycleDemo(contracts: any, traders: any, isTestnetDeploymen
     btcChildCallStrike,
     childExpiry
   ], { 
-    account: isTestnetDeployment ? tempAccounts[0].account : trader1.account 
+    account: isTestnetDeployment ? tempAccounts[1].account : trader2.account 
   });
   
   console.log(`✅ Transaction: ${tx3}`);
@@ -400,7 +431,7 @@ async function runLifecycleDemo(contracts: any, traders: any, isTestnetDeploymen
   
   transactions.push({
     phase: "Child Options",
-    trader: "Trader1",
+    trader: "Trader2",
     action: "Create Child CALL",
     parentStrike: "$50,000",
     childStrike: "$52,000",

@@ -5,6 +5,8 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "./MockPriceFeed.sol";
+import "./TimeOracle.sol";
 
 /**
  * @title CitreaLayeredOptionsTrading
@@ -35,6 +37,12 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
     // Premium calculation constants
     uint256 public constant BASE_PREMIUM_RATE = 100; // 0.01% = 100 basis points per 1000
     uint256 public constant BASIS_POINTS = 10000;
+    uint256 public constant VOLATILITY_FACTOR = 8000; // 80% volatility in basis points
+    uint256 public constant TIME_DECAY_FACTOR = 4000; // 40% time value factor
+    
+    // Oracle contracts for realistic pricing
+    mapping(address => MockPriceFeed) public priceFeeds; // Asset address => price feed
+    TimeOracle public timeOracle;
     
     // Events
     event LayeredOptionCreated(
@@ -65,13 +73,22 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
         bool isExercised
     );
     
-    constructor(address initialOwner, address _stablecoin) 
+    constructor(address initialOwner, address _stablecoin, address _timeOracle) 
         ERC1155("https://metadata.citreaoptions.com/{id}")
         Ownable(initialOwner)
         ReentrancyGuard()
     {
         require(_stablecoin != address(0), "Invalid stablecoin address");
+        require(_timeOracle != address(0), "Invalid time oracle address");
         stablecoin = _stablecoin;
+        timeOracle = TimeOracle(_timeOracle);
+    }
+    
+    /**
+     * @dev Get current time from oracle or fallback to block.timestamp
+     */
+    function getCurrentTime() internal view returns (uint256) {
+        return address(timeOracle) != address(0) ? timeOracle.getCurrentTime() : block.timestamp;
     }
     
     /**
@@ -87,7 +104,7 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
         address premiumToken
     ) external payable nonReentrant returns (uint256) {
         require(supportedAssets[baseAsset], "Asset not supported");
-        require(expiry > block.timestamp, "Invalid expiry");
+        require(expiry > getCurrentTime(), "Invalid expiry");
         
         // Handle premium payment
         if (premium > 0) {
@@ -135,7 +152,7 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
     function exerciseOption(uint256 tokenId) external nonReentrant {
         require(balanceOf(msg.sender, tokenId) > 0, "Not option holder");
         LayeredOption storage option = options[tokenId];
-        require(block.timestamp <= option.expiry, "Option expired");
+        require(getCurrentTime() <= option.expiry, "Option expired");
         require(!option.isExercised, "Option already exercised");
         
         // Mark as exercised
@@ -159,7 +176,7 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
     ) external nonReentrant returns (uint256) {
         require(balanceOf(msg.sender, parentTokenId) > 0, "Not parent holder");
         LayeredOption memory parent = options[parentTokenId];
-        require(block.timestamp <= parent.expiry, "Parent expired");
+        require(getCurrentTime() <= parent.expiry, "Parent expired");
         require(!parent.isExercised, "Parent exercised");
         
         // Validate strike price based on option type
@@ -172,7 +189,7 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
         // Handle expiry - default to parent expiry if 0
         uint256 childExpiry = newExpiry == 0 ? parent.expiry : newExpiry;
         require(childExpiry <= parent.expiry, "Child expiry cannot exceed parent");
-        require(childExpiry > block.timestamp, "Child expiry must be in future");
+        require(childExpiry > getCurrentTime(), "Child expiry must be in future");
         
         // Calculate premium based on strike differential and time remaining
         uint256 childPremium = _calculateChildPremium(
@@ -230,8 +247,11 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
             strikeDiff = parentStrike - childStrike;
         }
         
+        // Get current time from time oracle
+        uint256 currentTime = getCurrentTime();
+        
         // Time ratio: how much of the parent's time the child uses
-        uint256 timeRatio = (childExpiry - block.timestamp) * BASIS_POINTS / (parentExpiry - block.timestamp);
+        uint256 timeRatio = (childExpiry - currentTime) * BASIS_POINTS / (parentExpiry - currentTime);
         
         // Premium = strike differential * time ratio * base rate
         // This gives a premium proportional to risk and time
@@ -254,7 +274,7 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
         require(options[parentTokenId].baseAsset != address(0), "Parent option does not exist");
         LayeredOption memory parent = options[parentTokenId];
         require(!parent.isExercised, "Parent exercised");
-        require(block.timestamp <= parent.expiry, "Parent expired");
+        require(getCurrentTime() <= parent.expiry, "Parent expired");
         
         // Validate strike price
         if (parent.optionType == OptionType.CALL) {
@@ -265,7 +285,7 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
         
         uint256 childExpiry = newExpiry == 0 ? parent.expiry : newExpiry;
         require(childExpiry <= parent.expiry, "Child expiry cannot exceed parent");
-        require(childExpiry > block.timestamp, "Child expiry must be in future");
+        require(childExpiry > getCurrentTime(), "Child expiry must be in future");
         
         return _calculateChildPremium(
             parent.strikePrice,
@@ -284,6 +304,64 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
     }
     
     /**
+     * @dev Set price feed for an asset (for demo purposes)
+     */
+    function setPriceFeed(address asset, address priceFeed) external onlyOwner {
+        require(asset != address(0), "Invalid asset address");
+        require(priceFeed != address(0), "Invalid price feed address");
+        priceFeeds[asset] = MockPriceFeed(priceFeed);
+    }
+    
+    /**
+     * @dev Calculate realistic premium for parent options using price feeds
+     */
+    function calculateParentPremium(
+        address asset,
+        uint256 strikePrice,
+        uint256 expiry,
+        OptionType optionType
+    ) external view returns (uint256) {
+        MockPriceFeed priceFeed = priceFeeds[asset];
+        require(address(priceFeed) != address(0), "Price feed not set for asset");
+        
+        // Get current price from price feed
+        int256 price = priceFeed.latestAnswer();
+        require(price > 0, "Invalid price from feed");
+        uint256 currentPrice = uint256(price);
+        
+        // Get current time from time oracle
+        uint256 currentTime = getCurrentTime();
+        
+        // Time to expiry in seconds
+        uint256 timeToExpiry = expiry > currentTime ? expiry - currentTime : 0;
+        
+        // Convert to fraction of year (approximately)
+        uint256 timeInYears = (timeToExpiry * BASIS_POINTS) / (365 * 24 * 3600);
+        
+        // Calculate intrinsic value
+        uint256 intrinsicValue = 0;
+        if (optionType == OptionType.CALL && currentPrice > strikePrice) {
+            intrinsicValue = currentPrice - strikePrice;
+        } else if (optionType == OptionType.PUT && strikePrice > currentPrice) {
+            intrinsicValue = strikePrice - currentPrice;
+        }
+        
+        // Calculate time value: sqrt(timeInYears) * volatility * currentPrice * timeFactor / BASIS_POINTS²
+        uint256 timeValue = 0;
+        if (timeInYears > 0) {
+            // Simplified sqrt approximation for time decay
+            uint256 sqrtTime = timeInYears > BASIS_POINTS ? BASIS_POINTS : timeInYears;
+            timeValue = (sqrtTime * VOLATILITY_FACTOR * currentPrice * TIME_DECAY_FACTOR) / (BASIS_POINTS * BASIS_POINTS * BASIS_POINTS);
+        }
+        
+        // Total premium = intrinsic + time value, minimum 1% of asset price
+        uint256 totalPremium = intrinsicValue + timeValue;
+        uint256 minPremium = currentPrice / 100; // 1% minimum
+        
+        return totalPremium > minPremium ? totalPremium : minPremium;
+    }
+    
+    /**
      * @dev Get option details
      */
     function getOption(uint256 tokenId) external view returns (LayeredOption memory) {
@@ -293,7 +371,7 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
      * @dev Check if option is expired
      */
     function isOptionExpired(uint256 tokenId) external view returns (bool) {
-        return block.timestamp > options[tokenId].expiry;
+        return getCurrentTime() > options[tokenId].expiry;
     }
     
     /**

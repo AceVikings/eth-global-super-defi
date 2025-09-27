@@ -1,0 +1,15 @@
+{
+  "network": "citrea",
+  "timestamp": "2025-09-27T21:57:59.594Z",
+  "deployer": "0xe2ccad70370800c5319261be716b41732f802f62",
+  "contracts": {
+    "stablecoin": "0x43d109c41de6beab2e1d151d932bcc6318fa8f50",
+    "wbtc": "0x70b0efc2b112d37cfeb2641cfde41b8677375935",
+    "weth": "0x52e5d5ff769e71dfeead1a3fc5c440f87031a3e3",
+    "timeOracle": "0x12aece39b96768dc9a776b1b3176b2bc21063314",
+    "btcPriceFeed": "0x2574b49a1ded38c9f239682769e3c3e708797c7a",
+    "ethPriceFeed": "0x7d0c4127c937aaf59b0af8f686d63d602e27a777",
+    "layeredOptions": "0xcd9948d810c4e8c2144c4e2fb84786502e6bedc8"
+  },
+  "status": "fully_deployed_and_initialized"
+}

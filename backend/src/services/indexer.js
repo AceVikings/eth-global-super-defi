@@ -22,13 +22,15 @@ const citrea = defineChain({
   },
 });
 
-// Contract addresses (these will be updated after deployment)
+// Contract addresses - Updated for Citrea testnet deployment
 const CONTRACT_ADDRESSES = {
-  OPTIONS_TRADING: process.env.OPTIONS_TRADING_ADDRESS || '0x0165878A594ca255338adfa4d48449f69242Eb8F',
-  STABLE_COIN: process.env.STABLE_COIN_ADDRESS || '0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9',
-  BITCOIN_TOKEN: process.env.BITCOIN_TOKEN_ADDRESS || '0x5FbDB2315678afecb367f032d93F642f64180aa3',
-  BTC_PRICE_FEED: process.env.BTC_PRICE_FEED_ADDRESS || '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512',
-  TIME_ORACLE: process.env.TIME_ORACLE_ADDRESS || '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9'
+  OPTIONS_TRADING: process.env.OPTIONS_TRADING_ADDRESS || '0xcd9948d810c4e8c2144c4e2fb84786502e6bedc8',
+  STABLE_COIN: process.env.STABLE_COIN_ADDRESS || '0x43d109c41de6beab2e1d151d932bcc6318fa8f50',
+  BITCOIN_TOKEN: process.env.BITCOIN_TOKEN_ADDRESS || '0x70b0efc2b112d37cfeb2641cfde41b8677375935',
+  WETH_TOKEN: process.env.WETH_TOKEN_ADDRESS || '0x52e5d5ff769e71dfeead1a3fc5c440f87031a3e3',
+  BTC_PRICE_FEED: process.env.BTC_PRICE_FEED_ADDRESS || '0x2574b49a1ded38c9f239682769e3c3e708797c7a',
+  ETH_PRICE_FEED: process.env.ETH_PRICE_FEED_ADDRESS || '0x7d0c4127c937aaf59b0af8f686d63d602e27a777',
+  TIME_ORACLE: process.env.TIME_ORACLE_ADDRESS || '0x12aece39b96768dc9a776b1b3176b2bc21063314'
 };
 
 // Contract ABIs (from compiled artifacts)
