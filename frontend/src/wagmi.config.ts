@@ -1,12 +1,11 @@
 import { http } from "viem";
-import { mainnet, base } from "viem/chains";
+import { defineChain } from "viem";
 import { getDefaultConfig } from "@rainbow-me/rainbowkit";
 
-// Define Citrea testnet
-export const citreaTestnet = {
-  id: 62298,
+// Define Citrea testnet as proper Viem chain
+export const citreaTestnet = defineChain({
+  id: 5115,
   name: "Citrea Testnet",
-  network: "citrea-testnet",
   nativeCurrency: {
     decimals: 18,
     name: "Bitcoin",
@@ -14,7 +13,6 @@ export const citreaTestnet = {
   },
   rpcUrls: {
     default: { http: ["https://rpc.testnet.citrea.xyz"] },
-    public: { http: ["https://rpc.testnet.citrea.xyz"] },
   },
   blockExplorers: {
     default: {
@@ -23,17 +21,15 @@ export const citreaTestnet = {
     },
   },
   testnet: true,
-} as const;
+});
 
-// Define the chains we want to support
+// Configure wagmi to use ONLY Citrea testnet
 export const config = getDefaultConfig({
   appName: "Super DeFi",
   projectId: "YOUR_PROJECT_ID", // Get from WalletConnect Cloud
-  chains: [mainnet, base, citreaTestnet],
+  chains: [citreaTestnet], // Only Citrea testnet
   transports: {
-    [mainnet.id]: http(),
-    [base.id]: http(),
-    [citreaTestnet.id]: http(),
+    [citreaTestnet.id]: http("https://rpc.testnet.citrea.xyz"),
   },
-  ssr: false, // If your dApp uses server side rendering (SSR)
+  ssr: false,
 });

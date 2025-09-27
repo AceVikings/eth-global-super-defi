@@ -6,6 +6,7 @@ const TokenMinter = () => {
   const [mintAmount, setMintAmount] = useState('1000');
   const [selectedToken, setSelectedToken] = useState('stablecoin');
   const [loading, setLoading] = useState(false);
+  const [balanceLoading, setBalanceLoading] = useState(false);
   const [balances, setBalances] = useState({
     stablecoin: '0',
     bitcoin: '0'
@@ -18,17 +19,25 @@ const TokenMinter = () => {
     mintMockToken,
     getTokenBalance,
     initializeContracts,
-    contracts
+    contracts,
+    isOnCorrectChain
   } = useSmartContracts();
 
   // Load balances on component mount and when address changes
+  // Remove contracts from dependencies to prevent infinite loops
   useEffect(() => {
-    if (isConnected && address && contracts) {
+    if (isConnected && address && isOnCorrectChain()) {
       loadBalances();
     }
-  }, [isConnected, address, contracts]);
+  }, [isConnected, address]); // Removed contracts dependency
 
   const loadBalances = async () => {
+    // Prevent concurrent balance loading calls
+    if (balanceLoading || !isConnected || !address || !contracts) {
+      return;
+    }
+
+    setBalanceLoading(true);
     try {
       await initializeContracts();
       
@@ -43,6 +52,8 @@ const TokenMinter = () => {
       });
     } catch (err) {
       console.error('Failed to load balances:', err);
+    } finally {
+      setBalanceLoading(false);
     }
   };
 
@@ -62,7 +73,7 @@ const TokenMinter = () => {
     setSuccess('');
 
     try {
-      const receipt = await mintMockToken(selectedToken, mintAmount);
+      await mintMockToken(selectedToken as 'stablecoin' | 'bitcoin', mintAmount);
       setSuccess(`Successfully minted ${mintAmount} ${selectedToken === 'stablecoin' ? 'USDC' : 'BTC'} tokens!`);
       
       // Reload balances after successful mint
@@ -70,7 +81,7 @@ const TokenMinter = () => {
         loadBalances();
       }, 1000);
       
-    } catch (err) {
+    } catch (err: any) {
       console.error('Minting failed:', err);
       setError(err.message || 'Failed to mint tokens');
     } finally {
@@ -78,7 +89,7 @@ const TokenMinter = () => {
     }
   };
 
-  const formatBalance = (balance) => {
+  const formatBalance = (balance: string) => {
     const num = parseFloat(balance);
     if (num === 0) return '0';
     if (num < 0.0001) return '< 0.0001';
