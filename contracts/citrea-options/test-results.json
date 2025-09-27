@@ -1,0 +1,245 @@
+{
+  "testName": "Options Lifecycle End-to-End Test",
+  "network": "Citrea Testnet",
+  "chainId": 5115,
+  "startTime": "2025-09-27T12:38:39.178Z",
+  "totalSteps": 10,
+  "completedSteps": 10,
+  "success": true,
+  "tester": "0xE2Ccad70370800c5319261Be716B41732F802f62",
+  "contracts": {
+    "timeOracle": "0x2506fe09d6c08785463498577d1fd8f4fb9db76a",
+    "stableCoin": "0x471e11d879a395b8f1b66537ea1837e8ee113b80",
+    "bitcoinToken": "0xa06f12b8d9fe2515d41b62e556cce0467666e347",
+    "wrappedNative": "0xbaa08d8e70e3b96d8325b1fb13fa936a846fa041",
+    "btcPriceFeed": "0x333f8d70ce57f9e8be05acf3e879c0834f4db6b6",
+    "ethPriceFeed": "0x0ba4363ffec8fe2226be2195f85acd7608eb8b21",
+    "optionsTrading": "0x41fefcebef394deefc228af5615064ba430b95ec"
+  },
+  "steps": [
+    {
+      "step": 1,
+      "action": "Contract instances loaded successfully",
+      "status": "success",
+      "timestamp": "2025-09-27T12:38:39.178Z",
+      "data": {
+        "stableCoin": "0x471E11D879A395b8F1B66537EA1837e8eE113B80",
+        "bitcoinToken": "0xA06f12B8d9fE2515d41b62E556CCE0467666E347",
+        "optionsTrading": "0x41FefceBEf394dEeFc228AF5615064bA430b95Ec",
+        "btcPriceFeed": "0x333F8D70cE57F9e8Be05aCF3e879c0834F4Db6b6"
+      }
+    },
+    {
+      "step": 2,
+      "action": "Minting test tokens for writer and buyer",
+      "status": "pending",
+      "timestamp": "2025-09-27T12:38:39.179Z"
+    },
+    {
+      "step": 2,
+      "action": "Tokens minted successfully",
+      "status": "success",
+      "timestamp": "2025-09-27T12:38:56.627Z",
+      "data": {
+        "writerAddress": "0xE2Ccad70370800c5319261Be716B41732F802f62",
+        "buyerAddress": "0x6F7B20785c58ab47CbFf15BF234893290AE48dC4",
+        "usdcMinted": "10000",
+        "btcMinted": "10"
+      }
+    },
+    {
+      "step": 3,
+      "action": "Checking initial token balances",
+      "status": "pending",
+      "timestamp": "2025-09-27T12:38:56.627Z"
+    },
+    {
+      "step": 3,
+      "action": "Initial balances verified",
+      "status": "success",
+      "timestamp": "2025-09-27T12:38:57.376Z",
+      "data": {
+        "writer": {
+          "usdc": "1000000000049981600000",
+          "btc": "1000000000004021000000"
+        },
+        "buyer": {
+          "usdc": "10000000000",
+          "btc": "0"
+        }
+      }
+    },
+    {
+      "step": 4,
+      "action": "Setting up market parameters for BTC options",
+      "status": "pending",
+      "timestamp": "2025-09-27T12:38:57.376Z"
+    },
+    {
+      "step": 4,
+      "action": "Market parameters set successfully",
+      "status": "success",
+      "timestamp": "2025-09-27T12:39:07.887Z",
+      "data": {
+        "underlyingAsset": "0xA06f12B8d9fE2515d41b62E556CCE0467666E347",
+        "priceFeed": "0x333F8D70cE57F9e8Be05aCF3e879c0834F4Db6b6",
+        "collateral": "0x471E11D879A395b8F1B66537EA1837e8eE113B80",
+        "volatility": "20%",
+        "riskFreeRate": "5%",
+        "txHash": "0x205778ab7f5d02f606597f7ae56ad6e00e4a14511939fb4b8655b35b7bcbde93",
+        "gasUsed": "40920"
+      }
+    },
+    {
+      "step": 5,
+      "action": "Getting current BTC price from oracle",
+      "status": "pending",
+      "timestamp": "2025-09-27T12:39:07.888Z"
+    },
+    {
+      "step": 5,
+      "action": "Current BTC price retrieved",
+      "status": "success",
+      "timestamp": "2025-09-27T12:39:10.100Z",
+      "data": {
+        "price": "97000",
+        "priceWei": "9700000000000",
+        "roundId": "1",
+        "timestamp": "1758970982"
+      }
+    },
+    {
+      "step": 6,
+      "action": "Calculating collateral requirement and approving tokens",
+      "status": "pending",
+      "timestamp": "2025-09-27T12:39:10.100Z"
+    },
+    {
+      "step": 6,
+      "action": "Collateral calculated and approved successfully",
+      "status": "success",
+      "timestamp": "2025-09-27T12:39:15.829Z",
+      "data": {
+        "collateralRequired": "9700000",
+        "approvedAmount": "11640000",
+        "strikePrice": "116400",
+        "contractSize": "1",
+        "txHash": "0xbf8170262ddbc5e97450f606db6251159fb0cb9fa9638492348cdf0efa284926",
+        "gasUsed": "28845"
+      }
+    },
+    {
+      "step": 7,
+      "action": "Creating BTC call option",
+      "status": "pending",
+      "timestamp": "2025-09-27T12:39:15.829Z"
+    },
+    {
+      "step": 7,
+      "action": "Option created successfully",
+      "status": "success",
+      "timestamp": "2025-09-27T12:39:25.597Z",
+      "data": {
+        "optionId": "1",
+        "type": "CALL",
+        "strike": "116400",
+        "premium": "5314.945459",
+        "collateral": "9700000",
+        "expiryTimestamp": "1759063155",
+        "txHash": "0x43fd8feda958700d7a90ffa42d36171b8b95e659f889ee4e2ef3c7fd339f8cdc",
+        "gasUsed": "336186"
+      }
+    },
+    {
+      "step": 8,
+      "action": "Buyer approving premium payment",
+      "status": "pending",
+      "timestamp": "2025-09-27T12:39:25.597Z"
+    },
+    {
+      "step": 8,
+      "action": "Premium approved successfully",
+      "status": "success",
+      "timestamp": "2025-09-27T12:39:32.219Z",
+      "data": {
+        "amount": "5314.945459",
+        "buyer": "0x6F7B20785c58ab47CbFf15BF234893290AE48dC4",
+        "txHash": "0xd390d7da33333dc7852f4a223cf4401e014d20dce83e0c3147a23ab1deee2360",
+        "gasUsed": "45945"
+      }
+    },
+    {
+      "step": 9,
+      "action": "Buyer purchasing the option",
+      "status": "pending",
+      "timestamp": "2025-09-27T12:39:32.219Z"
+    },
+    {
+      "step": 9,
+      "action": "Option purchased successfully",
+      "status": "success",
+      "timestamp": "2025-09-27T12:39:37.297Z",
+      "data": {
+        "optionId": "1",
+        "buyer": "0x6F7B20785c58ab47CbFf15BF234893290AE48dC4",
+        "premiumPaid": "5314.945459",
+        "txHash": "0x4aec494207501982faf5dc76e0bc293fd4a7551382da483b90cefd5d694f62b1",
+        "gasUsed": "129195"
+      }
+    },
+    {
+      "step": 10,
+      "action": "Checking final token balances",
+      "status": "pending",
+      "timestamp": "2025-09-27T12:39:37.297Z"
+    },
+    {
+      "step": 10,
+      "action": "Final balances checked",
+      "status": "success",
+      "timestamp": "2025-09-27T12:39:38.253Z",
+      "data": {
+        "writer": {
+          "usdc": "1000000000049971905314.945459",
+          "btc": "1000000000004021000000"
+        },
+        "buyer": {
+          "usdc": "9999994685.054541",
+          "btc": "0"
+        },
+        "changes": {
+          "writerUsdcGain": "1.0000000000499719e+21",
+          "buyerUsdcLoss": "-9999984685.05454"
+        }
+      }
+    }
+  ],
+  "summary": {
+    "tokensMinted": {
+      "usdc": "10000",
+      "btc": "10"
+    },
+    "finalBalances": {
+      "writer": {
+        "usdc": "1000000000049971905314.945459",
+        "btc": "1000000000004021000000"
+      },
+      "buyer": {
+        "usdc": "9999994685.054541",
+        "btc": "0"
+      }
+    },
+    "optionCreated": {
+      "optionId": "1",
+      "strike": "116400",
+      "premium": "5314.945459",
+      "collateral": "9700000"
+    },
+    "optionPurchased": {
+      "optionId": "1",
+      "buyer": "0x6F7B20785c58ab47CbFf15BF234893290AE48dC4",
+      "premiumPaid": "5314.945459"
+    }
+  },
+  "endTime": "2025-09-27T12:39:38.253Z"
+}

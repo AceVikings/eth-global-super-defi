@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
 import { WagmiProvider } from 'wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RainbowKitProvider } from '@rainbow-me/rainbowkit'
@@ -17,7 +18,9 @@ createRoot(document.getElementById('root')!).render(
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider>
           <StarknetProvider>
-            <App />
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
           </StarknetProvider>
         </RainbowKitProvider>
       </QueryClientProvider>

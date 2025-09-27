@@ -98,11 +98,11 @@ const TokenMinter = () => {
 
   if (!isConnected) {
     return (
-      <div className="bg-red-900 border-4 border-red-600 p-6 rounded-lg font-mono">
-        <h3 className="text-yellow-400 font-bold text-xl mb-4 font-mono">
-          🚀 MOCK TOKEN MINTER 🚀
+      <div className="game-card bg-white">
+        <h3 className="font-bold text-xl mb-4" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>
+          MOCK TOKEN MINTER
         </h3>
-        <p className="text-red-300">
+        <p style={{ color: "var(--warm-red)" }}>
           Please connect your wallet to mint test tokens
         </p>
       </div>
@@ -110,25 +110,25 @@ const TokenMinter = () => {
   }
 
   return (
-    <div className="bg-blue-900 border-4 border-blue-600 p-6 rounded-lg font-mono">
-      <h3 className="text-yellow-400 font-bold text-xl mb-4 font-mono">
-        🪙 MOCK TOKEN MINTER 🪙
+    <div className="space-y-4">
+      <h3 className="font-bold text-xl mb-4" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>
+        MOCK TOKEN MINTER
       </h3>
       
       <div className="space-y-4">
         {/* Current Balances */}
-        <div className="bg-blue-800 p-4 rounded border-2 border-blue-500">
-          <h4 className="text-white font-bold mb-2">Your Balances:</h4>
+        <div className="game-card bg-white">
+          <h4 className="font-bold mb-2" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>Your Balances:</h4>
           <div className="grid grid-cols-2 gap-4 text-sm">
-            <div className="bg-green-700 p-2 rounded">
-              <span className="text-green-200">USDC:</span>
-              <span className="text-white ml-2 font-bold">
+            <div className="p-3 rounded" style={{ background: "var(--light-green)", color: "var(--charcoal)" }}>
+              <span>USDC:</span>
+              <span className="ml-2 font-bold">
                 {formatBalance(balances.stablecoin)}
               </span>
             </div>
-            <div className="bg-orange-700 p-2 rounded">
-              <span className="text-orange-200">BTC:</span>
-              <span className="text-white ml-2 font-bold">
+            <div className="p-3 rounded" style={{ background: "var(--sky-blue)", color: "var(--charcoal)" }}>
+              <span>BTC:</span>
+              <span className="ml-2 font-bold">
                 {formatBalance(balances.bitcoin)}
               </span>
             </div>
@@ -136,17 +136,17 @@ const TokenMinter = () => {
         </div>
 
         {/* Mint Interface */}
-        <div className="bg-blue-800 p-4 rounded border-2 border-blue-500">
+        <div className="game-card bg-white">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Token Selection */}
             <div>
-              <label className="block text-white font-bold mb-2">
+              <label className="block font-bold mb-2" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>
                 Select Token:
               </label>
               <select 
                 value={selectedToken}
                 onChange={(e) => setSelectedToken(e.target.value)}
-                className="w-full bg-blue-700 text-white p-2 rounded border border-blue-500 font-mono"
+                className="pixel-input"
               >
                 <option value="stablecoin">USDC (StableCoin)</option>
                 <option value="bitcoin">BTC (BitcoinToken)</option>
@@ -155,7 +155,7 @@ const TokenMinter = () => {
 
             {/* Amount Input */}
             <div>
-              <label className="block text-white font-bold mb-2">
+              <label className="block font-bold mb-2" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>
                 Amount to Mint:
               </label>
               <input
@@ -165,7 +165,7 @@ const TokenMinter = () => {
                 placeholder="1000"
                 min="0"
                 step="0.01"
-                className="w-full bg-blue-700 text-white p-2 rounded border border-blue-500 font-mono"
+                className="pixel-input"
               />
             </div>
           </div>
@@ -174,32 +174,28 @@ const TokenMinter = () => {
           <button
             onClick={handleMint}
             disabled={loading || !mintAmount}
-            className={`w-full mt-4 py-3 px-4 rounded font-bold transition-all duration-200 ${
-              loading || !mintAmount
-                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                : 'bg-green-600 hover:bg-green-500 text-white transform hover:scale-105 shadow-lg'
-            }`}
+            className={`nintendo-button-primary w-full mt-4 disabled:opacity-50`}
           >
-            {loading ? 'MINTING...' : `🎯 MINT ${mintAmount} ${selectedToken === 'stablecoin' ? 'USDC' : 'BTC'}`}
+            {loading ? 'MINTING...' : `MINT ${mintAmount} ${selectedToken === 'stablecoin' ? 'USDC' : 'BTC'}`}
           </button>
         </div>
 
         {/* Messages */}
         {error && (
-          <div className="bg-red-800 p-3 rounded border-2 border-red-500 text-red-200">
-            ❌ {error}
+          <div className="bg-red-100 border-2 border-red-400 p-3 rounded" style={{ color: "var(--warm-red)" }}>
+            {error}
           </div>
         )}
         
         {success && (
-          <div className="bg-green-800 p-3 rounded border-2 border-green-500 text-green-200">
-            ✅ {success}
+          <div className="bg-green-100 border-2 border-green-400 p-3 rounded" style={{ color: "var(--light-green)" }}>
+            {success}
           </div>
         )}
 
         {/* Instructions */}
-        <div className="bg-yellow-800 p-3 rounded border-2 border-yellow-500 text-yellow-200 text-sm">
-          <strong>💡 Instructions:</strong> These are test tokens for the Citrea testnet. 
+        <div className="p-3 rounded border-2" style={{ background: "var(--cream)", borderColor: "var(--border-gray)", color: "var(--charcoal)" }}>
+          <strong>Instructions:</strong> These are test tokens for the Citrea testnet. 
           Mint USDC for collateral and premiums, mint BTC to create options contracts. 
           You'll need both tokens to fully test the options trading functionality.
         </div>

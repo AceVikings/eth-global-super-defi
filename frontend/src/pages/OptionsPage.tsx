@@ -1,13 +1,9 @@
-import { WalletDropdown } from "../components/WalletDropdown";
+import { Navigation } from "../components/Navigation";
 import TokenMinter from "../components/TokenMinter";
 import { useState } from "react";
 import { useSmartContracts } from "../services/smartContracts";
 
-interface OptionsPageProps {
-  onNavigate: (page: string) => void;
-}
-
-const OptionsPage = ({ onNavigate }: OptionsPageProps) => {
+const OptionsPage = () => {
   const [optionForm, setOptionForm] = useState({
     optionType: 0, // 0 = Call, 1 = Put
     strikePrice: "",
@@ -85,27 +81,7 @@ const OptionsPage = ({ onNavigate }: OptionsPageProps) => {
       }}
     >
       {/* Game Menu Navigation */}
-      <nav className="game-menu sticky top-0 z-40">
-        <div className="w-full flex justify-between items-center">
-          <div className="menu-item" onClick={() => onNavigate("home")}>
-            Home
-          </div>
-
-          <div className="flex">
-            <div className="menu-item active">Options</div>
-            <div className="menu-item" onClick={() => onNavigate("swap")}>
-              Swap
-            </div>
-            <div className="menu-item" onClick={() => onNavigate("futures")}>
-              Futures
-            </div>
-          </div>
-
-          <div className="flex items-center">
-            <WalletDropdown />
-          </div>
-        </div>
-      </nav>
+      <Navigation />
 
       {/* Main Content */}
       <div className="px-6 py-8">
@@ -114,9 +90,9 @@ const OptionsPage = ({ onNavigate }: OptionsPageProps) => {
           <div className="text-center mb-8">
             <h1
               className="text-4xl md:text-6xl mb-4"
-              style={{ color: "var(--warm-red)" }}
+              style={{ color: "var(--charcoal)" }}
             >
-              ⚡ OPTIONS TRADING ⚡
+              OPTIONS TRADING
             </h1>
             <p className="text-xl" style={{ color: "var(--charcoal)" }}>
               Create and Trade Options on Citrea
@@ -126,38 +102,38 @@ const OptionsPage = ({ onNavigate }: OptionsPageProps) => {
           {/* Options Trading Sections */}
           <div className="space-y-8">
             {/* Token Minting Section */}
-            <div className="bg-blue-900 border-4 border-blue-600 rounded-lg p-6 text-white font-mono">
-              <h2 className="text-yellow-400 text-xl font-bold mb-4">
+            <div className="game-card bg-white">
+              <h2 className="text-xl font-bold mb-4" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>
                 Mint Mock Tokens
               </h2>
-              <p className="mb-4">Mint test tokens for options trading:</p>
+              <p className="mb-4" style={{ color: "var(--charcoal)" }}>Mint test tokens for options trading:</p>
               <TokenMinter />
             </div>
 
-            <div className="bg-blue-900 border-4 border-blue-600 rounded-lg p-6 text-white font-mono">
-              <h2 className="text-yellow-400 text-xl font-bold mb-4">
+            <div className="game-card bg-white">
+              <h2 className="text-xl font-bold mb-4" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>
                 Create New Option
               </h2>
 
               {error && (
-                <div className="bg-red-600 border border-red-400 rounded p-2 mb-4">
+                <div className="bg-red-100 border-2 border-red-400 rounded p-3 mb-4" style={{ color: "var(--warm-red)" }}>
                   {error}
                 </div>
               )}
 
               {success && (
-                <div className="bg-green-600 border border-green-400 rounded p-2 mb-4">
+                <div className="bg-green-100 border-2 border-green-400 rounded p-3 mb-4" style={{ color: "var(--light-green)" }}>
                   {success}
                 </div>
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-yellow-400 text-sm mb-2">
+                  <label className="block text-sm mb-2 font-bold" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>
                     Option Type
                   </label>
                   <select
-                    className="w-full bg-blue-800 border border-blue-500 rounded p-2 text-white"
+                    className="pixel-input"
                     value={optionForm.optionType}
                     onChange={(e) =>
                       setOptionForm({
@@ -172,13 +148,13 @@ const OptionsPage = ({ onNavigate }: OptionsPageProps) => {
                 </div>
 
                 <div>
-                  <label className="block text-yellow-400 text-sm mb-2">
+                  <label className="block text-sm mb-2 font-bold" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>
                     Strike Price
                   </label>
                   <input
                     type="number"
                     placeholder="Enter strike price"
-                    className="w-full bg-blue-800 border border-blue-500 rounded p-2 text-white"
+                    className="pixel-input"
                     value={optionForm.strikePrice}
                     onChange={(e) =>
                       setOptionForm({
@@ -190,13 +166,13 @@ const OptionsPage = ({ onNavigate }: OptionsPageProps) => {
                 </div>
 
                 <div>
-                  <label className="block text-yellow-400 text-sm mb-2">
+                  <label className="block text-sm mb-2 font-bold" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>
                     Expiry (Days)
                   </label>
                   <input
                     type="number"
                     placeholder="Days until expiry"
-                    className="w-full bg-blue-800 border border-blue-500 rounded p-2 text-white"
+                    className="pixel-input"
                     value={optionForm.expiryDays}
                     onChange={(e) =>
                       setOptionForm({
@@ -208,13 +184,13 @@ const OptionsPage = ({ onNavigate }: OptionsPageProps) => {
                 </div>
 
                 <div>
-                  <label className="block text-yellow-400 text-sm mb-2">
+                  <label className="block text-sm mb-2 font-bold" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>
                     Contract Size
                   </label>
                   <input
                     type="number"
                     placeholder="Contract size"
-                    className="w-full bg-blue-800 border border-blue-500 rounded p-2 text-white"
+                    className="pixel-input"
                     value={optionForm.contractSize}
                     onChange={(e) =>
                       setOptionForm({
@@ -226,13 +202,13 @@ const OptionsPage = ({ onNavigate }: OptionsPageProps) => {
                 </div>
 
                 <div>
-                  <label className="block text-yellow-400 text-sm mb-2">
+                  <label className="block text-sm mb-2 font-bold" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>
                     Underlying Asset
                   </label>
                   <input
                     type="text"
                     placeholder="Asset address"
-                    className="w-full bg-blue-800 border border-blue-500 rounded p-2 text-white"
+                    className="pixel-input"
                     value={optionForm.underlyingAsset}
                     onChange={(e) =>
                       setOptionForm({
@@ -244,13 +220,13 @@ const OptionsPage = ({ onNavigate }: OptionsPageProps) => {
                 </div>
 
                 <div>
-                  <label className="block text-yellow-400 text-sm mb-2">
+                  <label className="block text-sm mb-2 font-bold" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>
                     Collateral Token
                   </label>
                   <input
                     type="text"
                     placeholder="Collateral token address"
-                    className="w-full bg-blue-800 border border-blue-500 rounded p-2 text-white"
+                    className="pixel-input"
                     value={optionForm.collateralToken}
                     onChange={(e) =>
                       setOptionForm({
@@ -265,28 +241,28 @@ const OptionsPage = ({ onNavigate }: OptionsPageProps) => {
               <button
                 onClick={handleCreateOption}
                 disabled={creating}
-                className="w-full mt-4 bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 px-4 rounded disabled:opacity-50"
+                className="nintendo-button-primary w-full mt-4 disabled:opacity-50"
               >
                 {creating ? "Creating Option..." : "Create Option"}
               </button>
             </div>
 
-            <div className="bg-blue-900 border-4 border-blue-600 rounded-lg p-6 text-white font-mono">
-              <h2 className="text-yellow-400 text-xl font-bold mb-4">
+            <div className="game-card bg-white">
+              <h2 className="text-xl font-bold mb-4" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>
                 Purchase Option
               </h2>
-              <p className="mb-4">
+              <p className="mb-4" style={{ color: "var(--charcoal)" }}>
                 Purchase existing options by paying premium:
               </p>
 
               <div className="mb-4">
-                <label className="block text-yellow-400 text-sm mb-2">
+                <label className="block text-sm mb-2 font-bold" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>
                   Option ID
                 </label>
                 <input
                   type="text"
                   placeholder="Enter option ID to purchase"
-                  className="w-full bg-blue-800 border border-blue-500 rounded p-2 text-white"
+                  className="pixel-input"
                   value={optionId}
                   onChange={(e) => setOptionId(e.target.value)}
                 />
@@ -295,16 +271,20 @@ const OptionsPage = ({ onNavigate }: OptionsPageProps) => {
               <button
                 onClick={handlePurchaseOption}
                 disabled={purchasing || !optionId}
-                className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
+                className="nintendo-button w-full disabled:opacity-50"
+                style={{ 
+                  background: purchasing || !optionId ? 'var(--light-gray)' : 'var(--light-green)',
+                  color: 'var(--charcoal)'
+                }}
               >
                 {purchasing ? "Purchasing Option..." : "Purchase Option"}
               </button>
 
-              <div className="mt-4 text-sm text-gray-300">
-                <p>
+              <div className="mt-4 text-sm" style={{ color: "var(--charcoal)" }}>
+                <p className="mb-1">
                   • Make sure you have sufficient collateral/stablecoin balance
                 </p>
-                <p>• Premium will be calculated automatically</p>
+                <p className="mb-1">• Premium will be calculated automatically</p>
                 <p>• Transaction will be sent to your connected wallet</p>
               </div>
             </div>

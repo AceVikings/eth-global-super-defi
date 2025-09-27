@@ -1,44 +1,11 @@
-import { WalletDropdown } from '../components/WalletDropdown'
+import { Navigation } from '../components/Navigation'
 
-interface SwapPageProps {
-  onNavigate: (page: string) => void;
-}
-
-export function SwapPage({ onNavigate }: SwapPageProps) {
+export function SwapPage() {
   return (
     <div className="h-screen w-screen overflow-auto" style={{ background: 'linear-gradient(180deg, var(--sky-blue) 0%, var(--light-green) 50%, var(--cream) 100%)' }}>
       
       {/* Game Menu Navigation */}
-      <nav className="game-menu sticky top-0 z-40">
-        <div className="w-full flex justify-between items-center">
-          <div 
-            className="menu-item"
-            onClick={() => onNavigate('home')}
-          >
-            Home
-          </div>
-          
-          <div className="flex">
-            <div 
-              className="menu-item"
-              onClick={() => onNavigate('options')}
-            >
-              Options
-            </div>
-            <div className="menu-item active">Swap</div>
-            <div 
-              className="menu-item"
-              onClick={() => onNavigate('futures')}
-            >
-              Futures
-            </div>
-          </div>
-          
-          <div className="flex items-center">
-            <WalletDropdown />
-          </div>
-        </div>
-      </nav>
+      <Navigation />
 
       {/* Swap Content */}
       <div className="px-6 py-12">

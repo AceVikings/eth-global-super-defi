@@ -1,55 +1,16 @@
 import { useState } from 'react'
-import { WalletDropdown } from '../components/WalletDropdown'
+import { useNavigate } from 'react-router-dom'
+import { Navigation } from '../components/Navigation'
 
-interface HomePageProps {
-  onNavigate: (page: string) => void;
-}
-
-export function HomePage({ onNavigate }: HomePageProps) {
+export function HomePage() {
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false)
+  const navigate = useNavigate()
 
   return (
     <div className="h-screen w-screen overflow-auto" style={{ background: 'linear-gradient(180deg, var(--sky-blue) 0%, var(--light-green) 50%, var(--cream) 100%)' }}>
       
       {/* Game Menu Navigation */}
-      <nav className="game-menu sticky top-0 z-40">
-        <div className="w-full flex justify-between items-center">
-          <div className="menu-item active">
-            Home
-          </div>
-          
-          <div className="flex">
-            <div 
-              className="menu-item"
-              onClick={() => onNavigate('options')}
-            >
-              Options
-            </div>
-            <div 
-              className="menu-item"
-              onClick={() => onNavigate('swap')}
-            >
-              Swap
-            </div>
-            <div 
-              className="menu-item"
-              onClick={() => onNavigate('futures')}
-            >
-              Futures
-            </div>
-            <div 
-              className="menu-item"
-              onClick={() => onNavigate('test')}
-            >
-              Test
-            </div>
-          </div>
-          
-          <div className="flex items-center">
-            <WalletDropdown />
-          </div>
-        </div>
-      </nav>
+      <Navigation />
 
       {/* Hero Section */}
       <section className="relative py-20 px-4 text-center">
@@ -66,7 +27,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
           <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-8">
             <button 
               className="nintendo-button-primary"
-              onClick={() => onNavigate('options')}
+              onClick={() => navigate('/options')}
             >
               START ADVENTURE
             </button>
@@ -92,7 +53,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
             
             <div 
               className="game-card text-center cursor-pointer hover:scale-105 transition-transform"
-              onClick={() => onNavigate('swap')}
+              onClick={() => navigate('/swap')}
             >
               <h3 className="text-lg mb-3" style={{ color: 'var(--charcoal)' }}>CROSS-CHAIN SWAPS</h3>
               <p className="text-sm leading-relaxed">
@@ -103,7 +64,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
 
             <div 
               className="game-card text-center cursor-pointer hover:scale-105 transition-transform"
-              onClick={() => onNavigate('options')}
+              onClick={() => navigate('/options')}
             >
               <h3 className="text-lg mb-3" style={{ color: 'var(--charcoal)' }}>ADVANCED OPTIONS</h3>
               <p className="text-sm leading-relaxed">
@@ -114,7 +75,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
 
             <div 
               className="game-card text-center cursor-pointer hover:scale-105 transition-transform"
-              onClick={() => onNavigate('futures')}
+              onClick={() => navigate('/futures')}
             >
               <h3 className="text-lg mb-3" style={{ color: 'var(--charcoal)' }}>FUTURES TRADING</h3>
               <p className="text-sm leading-relaxed">
