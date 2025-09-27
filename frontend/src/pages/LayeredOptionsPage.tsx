@@ -248,7 +248,7 @@ const LayeredOptionsPage = () => {
 
   return (
     <div
-      className="min-h-screen w-full"
+      className="min-h-screen w-screen"
       style={{
         background: "var(--retro-black)",
         color: "var(--retro-off-white)",

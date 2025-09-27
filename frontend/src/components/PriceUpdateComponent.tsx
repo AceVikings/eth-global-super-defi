@@ -131,83 +131,51 @@ export const PriceUpdateComponent: React.FC<PriceUpdateComponentProps> = ({ clas
     }
   };
 
-  const cardStyle: React.CSSProperties = {
-    border: '1px solid var(--retro-border)',
-    borderRadius: '0',
-    padding: '24px',
-    backgroundColor: 'var(--retro-black)',
-    boxShadow: 'inset 2px 2px 5px rgba(0, 0, 0, 0.5)',
-  };
-
-  const buttonStyle: React.CSSProperties = {
-    backgroundColor: 'var(--retro-dark-gray)',
-    color: 'var(--retro-off-white)',
-    padding: '8px 16px',
-    borderRadius: '0',
-    border: '1px solid var(--retro-border)',
-    cursor: 'pointer',
-    fontSize: '12px',
-    fontWeight: 'normal',
-    fontFamily: 'Courier New, monospace',
-    textTransform: 'uppercase',
-    letterSpacing: '1px',
-  };
-
-  const buttonDisabledStyle: React.CSSProperties = {
-    ...buttonStyle,
-    backgroundColor: 'var(--retro-light-gray)',
-    cursor: 'not-allowed',
-    opacity: 0.6,
-  };
-
-  const inputStyle: React.CSSProperties = {
-    padding: '8px 12px',
-    border: '1px solid var(--retro-border)',
-    borderRadius: '0',
-    fontSize: '14px',
-    flex: 1,
-    background: 'var(--retro-dark-gray)',
-    color: 'var(--retro-off-white)',
-    fontFamily: 'Courier New, monospace',
-  };
+  
 
   return (
     <div className={className}>
-      <div style={cardStyle}>
-        <div style={{ marginBottom: '24px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'Courier New, monospace', textTransform: 'uppercase', letterSpacing: '2px', color: 'var(--retro-green)' }}>
+      <div className="terminal-panel">
+        <div className="mb-6">
+          <h3 className="text-lg font-mono font-bold mb-2 uppercase tracking-wider" 
+              style={{ color: "var(--retro-green)" }}>
             [ORACLE PRICE CONTROL]
           </h3>
-          <p style={{ color: 'var(--retro-off-white)', fontSize: '12px', lineHeight: '1.4', fontFamily: 'Courier New, monospace' }}>
+          <p className="font-mono text-xs leading-relaxed" style={{ color: "var(--retro-off-white)" }}>
             &gt; UPDATE BTC AND ETH PRICES FOR DEMO PURPOSES
             <br />
             &gt; AFFECTS ALL OPTION PRICING CALCULATIONS
           </p>
         </div>
 
-        <div style={{ marginBottom: '24px' }}>
+        <div className="mb-6">
           {/* Current Prices Display */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', padding: '16px', backgroundColor: 'var(--retro-dark-gray)', border: '1px solid var(--retro-border)', marginBottom: '24px' }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '12px', color: 'var(--retro-amber)', marginBottom: '4px', fontFamily: 'Courier New, monospace', textTransform: 'uppercase', letterSpacing: '1px' }}>CURRENT BTC PRICE</div>
-              <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--retro-green)', fontFamily: 'Courier New, monospace' }}>
+          <div className="grid grid-cols-2 gap-4 terminal-window p-4 mb-6">
+            <div className="text-center">
+              <div className="text-xs font-mono mb-1 uppercase tracking-wide" style={{ color: "var(--retro-amber)" }}>
+                CURRENT BTC PRICE
+              </div>
+              <div className="text-xl font-mono font-bold" style={{ color: "var(--retro-green)" }}>
                 ${currentBtcPrice ? Number(currentBtcPrice).toLocaleString() : '...'}
               </div>
             </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '12px', color: 'var(--retro-amber)', marginBottom: '4px', fontFamily: 'Courier New, monospace', textTransform: 'uppercase', letterSpacing: '1px' }}>CURRENT ETH PRICE</div>
-              <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--retro-green)', fontFamily: 'Courier New, monospace' }}>
+            <div className="text-center">
+              <div className="text-xs font-mono mb-1 uppercase tracking-wide" style={{ color: "var(--retro-amber)" }}>
+                CURRENT ETH PRICE
+              </div>
+              <div className="text-xl font-mono font-bold" style={{ color: "var(--retro-green)" }}>
                 ${currentEthPrice ? Number(currentEthPrice).toLocaleString() : '...'}
               </div>
             </div>
           </div>
 
           {/* BTC Price Update */}
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+          <div className="mb-4">
+            <label className="block text-sm font-mono mb-2 uppercase tracking-wide" 
+                   style={{ color: "var(--retro-amber)" }}>
               Bitcoin (BTC) Price (USD)
             </label>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div className="flex gap-2">
               <input
                 type="number"
                 value={btcPrice}
@@ -215,24 +183,27 @@ export const PriceUpdateComponent: React.FC<PriceUpdateComponentProps> = ({ clas
                 placeholder="92000"
                 min="1"
                 step="1000"
-                style={inputStyle}
+                className="retro-input flex-1 px-3 py-2 font-mono text-sm"
               />
               <button 
                 onClick={() => updatePrice('BTC', btcPrice)}
                 disabled={loading || !isConnected}
-                style={loading || !isConnected ? buttonDisabledStyle : buttonStyle}
+                className={loading || !isConnected ? 
+                  "retro-button-secondary px-4 py-2 font-mono text-sm opacity-50 cursor-not-allowed" : 
+                  "retro-button-primary px-4 py-2 font-mono text-sm"}
               >
-                {loading ? 'Updating...' : 'Update BTC'}
+                {loading ? 'UPDATING...' : 'UPDATE BTC'}
               </button>
             </div>
           </div>
 
           {/* ETH Price Update */}
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+          <div className="mb-4">
+            <label className="block text-sm font-mono mb-2 uppercase tracking-wide" 
+                   style={{ color: "var(--retro-amber)" }}>
               Ethereum (ETH) Price (USD)
             </label>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div className="flex gap-2">
               <input
                 type="number"
                 value={ethPrice}
@@ -240,67 +211,74 @@ export const PriceUpdateComponent: React.FC<PriceUpdateComponentProps> = ({ clas
                 placeholder="2500"
                 min="1"
                 step="100"
-                style={inputStyle}
+                className="retro-input flex-1 px-3 py-2 font-mono text-sm"
               />
               <button 
                 onClick={() => updatePrice('ETH', ethPrice)}
                 disabled={loading || !isConnected}
-                style={loading || !isConnected ? buttonDisabledStyle : buttonStyle}
+                className={loading || !isConnected ? 
+                  "retro-button-secondary px-4 py-2 font-mono text-sm opacity-50 cursor-not-allowed" : 
+                  "retro-button-primary px-4 py-2 font-mono text-sm"}
               >
-                {loading ? 'Updating...' : 'Update ETH'}
+                {loading ? 'UPDATING...' : 'UPDATE ETH'}
               </button>
             </div>
           </div>
 
           {/* Quick Price Presets */}
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '12px' }}>
+          <div className="mb-4">
+            <label className="block text-sm font-mono mb-3 uppercase tracking-wide" 
+                   style={{ color: "var(--retro-amber)" }}>
               Quick Price Scenarios
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>BTC Scenarios</div>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <div className="text-sm font-mono mb-2 uppercase" style={{ color: "var(--retro-green)" }}>
+                  BTC SCENARIOS
+                </div>
+                <div className="flex gap-1 flex-wrap">
                   <button 
                     onClick={() => setBtcPrice('85000')}
-                    style={{ ...buttonStyle, backgroundColor: '#ef4444', fontSize: '12px', padding: '4px 8px' }}
+                    className="retro-button-secondary px-2 py-1 font-mono text-xs"
                   >
-                    📉 $85K
+                    $85K
                   </button>
                   <button 
                     onClick={() => setBtcPrice('100000')}
-                    style={{ ...buttonStyle, backgroundColor: '#10b981', fontSize: '12px', padding: '4px 8px' }}
+                    className="retro-button-secondary px-2 py-1 font-mono text-xs"
                   >
-                    📈 $100K
+                    $100K
                   </button>
                   <button 
                     onClick={() => setBtcPrice('110000')}
-                    style={{ ...buttonStyle, backgroundColor: '#8b5cf6', fontSize: '12px', padding: '4px 8px' }}
+                    className="retro-button-secondary px-2 py-1 font-mono text-xs"
                   >
-                    🚀 $110K
+                    $110K
                   </button>
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>ETH Scenarios</div>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <div className="text-sm font-mono mb-2 uppercase" style={{ color: "var(--retro-green)" }}>
+                  ETH SCENARIOS
+                </div>
+                <div className="flex gap-1 flex-wrap">
                   <button 
                     onClick={() => setEthPrice('2000')}
-                    style={{ ...buttonStyle, backgroundColor: '#ef4444', fontSize: '12px', padding: '4px 8px' }}
+                    className="retro-button-secondary px-2 py-1 font-mono text-xs"
                   >
-                    📉 $2K
+                    $2K
                   </button>
                   <button 
                     onClick={() => setEthPrice('3000')}
-                    style={{ ...buttonStyle, backgroundColor: '#10b981', fontSize: '12px', padding: '4px 8px' }}
+                    className="retro-button-secondary px-2 py-1 font-mono text-xs"
                   >
-                    📈 $3K
+                    $3K
                   </button>
                   <button 
                     onClick={() => setEthPrice('3500')}
-                    style={{ ...buttonStyle, backgroundColor: '#8b5cf6', fontSize: '12px', padding: '4px 8px' }}
+                    className="retro-button-secondary px-2 py-1 font-mono text-xs"
                   >
-                    🚀 $3.5K
+                    $3.5K
                   </button>
                 </div>
               </div>
@@ -309,21 +287,25 @@ export const PriceUpdateComponent: React.FC<PriceUpdateComponentProps> = ({ clas
 
           {/* Status Messages */}
           {error && (
-            <div style={{ padding: '12px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', marginBottom: '16px' }}>
-              <div style={{ color: '#dc2626', fontSize: '14px' }}>{error}</div>
+            <div className="terminal-window p-3 mb-4 border-retro-red">
+              <div className="font-mono text-sm" style={{ color: "var(--retro-red)" }}>
+                [ERROR] {error}
+              </div>
             </div>
           )}
 
           {success && (
-            <div style={{ padding: '12px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', marginBottom: '16px' }}>
-              <div style={{ color: '#16a34a', fontSize: '14px' }}>{success}</div>
+            <div className="terminal-window p-3 mb-4 border-retro-green">
+              <div className="font-mono text-sm" style={{ color: "var(--retro-green)" }}>
+                [SUCCESS] {success}
+              </div>
             </div>
           )}
 
           {!isConnected && (
-            <div style={{ padding: '12px', backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '6px' }}>
-              <div style={{ color: '#0369a1', fontSize: '14px' }}>
-                Connect your wallet to update oracle prices
+            <div className="terminal-window p-3 border-retro-amber">
+              <div className="font-mono text-sm" style={{ color: "var(--retro-amber)" }}>
+                [WARNING] CONNECT YOUR WALLET TO UPDATE ORACLE PRICES
               </div>
             </div>
           )}

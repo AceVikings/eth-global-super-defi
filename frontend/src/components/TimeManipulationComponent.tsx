@@ -176,173 +176,165 @@ export const TimeManipulationComponent: React.FC<TimeManipulationComponentProps>
     increaseTime(seconds);
   };
 
-  const cardStyle: React.CSSProperties = {
-    border: '1px solid #e2e8f0',
-    borderRadius: '8px',
-    padding: '24px',
-    backgroundColor: 'white',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-  };
-
-  const buttonStyle: React.CSSProperties = {
-    backgroundColor: '#3b82f6',
-    color: 'white',
-    padding: '8px 16px',
-    borderRadius: '6px',
-    border: 'none',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: '500',
-  };
-
-  const buttonDisabledStyle: React.CSSProperties = {
-    ...buttonStyle,
-    backgroundColor: '#9ca3af',
-    cursor: 'not-allowed',
-  };
-
-  const inputStyle: React.CSSProperties = {
-    padding: '8px 12px',
-    border: '1px solid #d1d5db',
-    borderRadius: '6px',
-    fontSize: '14px',
-    flex: 1,
-  };
-
   return (
     <div className={className}>
-      <div style={cardStyle}>
-        <div style={{ marginBottom: '24px' }}>
-          <h3 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            🕐 Time Oracle Control
+      <div className="terminal-panel">
+        <div className="mb-6">
+          <h3 className="text-2xl font-mono font-bold mb-2 uppercase tracking-wider" 
+              style={{ color: "var(--retro-amber)" }}>
+            [TIME ORACLE CONTROL]
           </h3>
-          <p style={{ color: '#6b7280', fontSize: '14px', lineHeight: '1.4' }}>
-            Manipulate time for demo purposes. This affects option expiry calculations and allows testing of time-dependent features.
+          <p className="font-mono text-sm leading-relaxed" style={{ color: "var(--retro-off-white)" }}>
+            MANIPULATE TIME FOR DEMO PURPOSES. THIS AFFECTS OPTION EXPIRY CALCULATIONS 
+            AND ALLOWS TESTING OF TIME-DEPENDENT FEATURES.
           </p>
         </div>
 
-        <div style={{ marginBottom: '24px' }}>
+        <div className="mb-6">
           {/* Current Oracle Time Display */}
-          <div style={{ padding: '16px', backgroundColor: '#f0f9ff', borderRadius: '8px', marginBottom: '24px', textAlign: 'center' }}>
-            <div style={{ fontSize: '14px', color: '#0369a1', marginBottom: '8px' }}>Current Oracle Time</div>
-            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1e40af' }}>
-              {currentOracleTime || 'Loading...'}
+          <div className="terminal-window p-4 mb-6 text-center border-retro-green">
+            <div className="text-sm font-mono mb-2 uppercase tracking-wide" style={{ color: "var(--retro-amber)" }}>
+              CURRENT ORACLE TIME
             </div>
-            <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
-              Real Time: {new Date().toLocaleString()}
+            <div className="text-2xl font-mono font-bold" style={{ color: "var(--retro-green)" }}>
+              {currentOracleTime || 'LOADING...'}
+            </div>
+            <div className="text-xs font-mono mt-1" style={{ color: "var(--retro-off-white)" }}>
+              REAL TIME: {new Date().toLocaleString()}
             </div>
           </div>
 
           {/* Set Specific DateTime */}
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+          <div className="mb-5">
+            <label className="block text-sm font-mono mb-2 uppercase tracking-wide" 
+                   style={{ color: "var(--retro-amber)" }}>
               Set Oracle to Specific Date & Time
             </label>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div className="flex gap-2 items-center">
               <input
                 type="datetime-local"
                 value={targetDateTime}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTargetDateTime(e.target.value)}
-                style={{ ...inputStyle, minWidth: '200px' }}
+                className="retro-input flex-1 px-3 py-2 font-mono text-sm"
               />
               <button 
                 onClick={handleSetDateTime}
                 disabled={loading || !isConnected}
-                style={loading || !isConnected ? buttonDisabledStyle : buttonStyle}
+                className={loading || !isConnected ? 
+                  "retro-button-secondary px-4 py-2 font-mono text-sm opacity-50 cursor-not-allowed" : 
+                  "retro-button-primary px-4 py-2 font-mono text-sm"}
               >
-                {loading ? 'Setting...' : 'Set Time'}
+                {loading ? 'SETTING...' : 'SET TIME'}
               </button>
             </div>
           </div>
 
           {/* Increase Time */}
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-              Increase Oracle Time (seconds)
+          <div className="mb-5">
+            <label className="block text-sm font-mono mb-2 uppercase tracking-wide" 
+                   style={{ color: "var(--retro-amber)" }}>
+              Increase Oracle Time (Seconds)
             </label>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div className="flex gap-2 items-center">
               <input
                 type="number"
                 value={timeIncrement}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTimeIncrement(e.target.value)}
                 placeholder="3600"
                 min="1"
-                style={inputStyle}
+                className="retro-input flex-1 px-3 py-2 font-mono text-sm"
               />
               <button 
                 onClick={handleIncreaseTime}
                 disabled={loading || !isConnected}
-                style={loading || !isConnected ? buttonDisabledStyle : buttonStyle}
+                className={loading || !isConnected ? 
+                  "retro-button-secondary px-4 py-2 font-mono text-sm opacity-50 cursor-not-allowed" : 
+                  "retro-button-primary px-4 py-2 font-mono text-sm"}
               >
-                {loading ? 'Increasing...' : 'Increase Time'}
+                {loading ? 'INCREASING...' : 'INCREASE TIME'}
               </button>
             </div>
           </div>
 
           {/* Quick Time Actions */}
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '12px' }}>
+          <div className="mb-5">
+            <label className="block text-sm font-mono mb-3 uppercase tracking-wide" 
+                   style={{ color: "var(--retro-amber)" }}>
               Quick Time Actions
             </label>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               <button 
                 onClick={() => {
                   const now = Math.floor(Date.now() / 1000);
                   setOracleTime(now);
                 }}
                 disabled={loading || !isConnected}
-                style={loading || !isConnected ? { ...buttonStyle, backgroundColor: '#10b981', opacity: 0.6 } : { ...buttonStyle, backgroundColor: '#10b981' }}
+                className={loading || !isConnected ? 
+                  "retro-button-secondary px-3 py-2 font-mono text-xs opacity-50 cursor-not-allowed" : 
+                  "retro-button-secondary px-3 py-2 font-mono text-xs"}
               >
-                🕐 Set to Now
+                SET TO NOW
               </button>
               <button 
                 onClick={() => increaseTime(3600)} // 1 hour
                 disabled={loading || !isConnected}
-                style={loading || !isConnected ? { ...buttonStyle, backgroundColor: '#f59e0b', opacity: 0.6 } : { ...buttonStyle, backgroundColor: '#f59e0b' }}
+                className={loading || !isConnected ? 
+                  "retro-button-secondary px-3 py-2 font-mono text-xs opacity-50 cursor-not-allowed" : 
+                  "retro-button-secondary px-3 py-2 font-mono text-xs"}
               >
-                +1 Hour
+                +1 HOUR
               </button>
               <button 
                 onClick={() => increaseTime(86400)} // 1 day
                 disabled={loading || !isConnected}
-                style={loading || !isConnected ? { ...buttonStyle, backgroundColor: '#f59e0b', opacity: 0.6 } : { ...buttonStyle, backgroundColor: '#f59e0b' }}
+                className={loading || !isConnected ? 
+                  "retro-button-secondary px-3 py-2 font-mono text-xs opacity-50 cursor-not-allowed" : 
+                  "retro-button-secondary px-3 py-2 font-mono text-xs"}
               >
-                +1 Day
+                +1 DAY
               </button>
               <button 
                 onClick={() => increaseTime(604800)} // 1 week
                 disabled={loading || !isConnected}
-                style={loading || !isConnected ? { ...buttonStyle, backgroundColor: '#ef4444', opacity: 0.6 } : { ...buttonStyle, backgroundColor: '#ef4444' }}
+                className={loading || !isConnected ? 
+                  "retro-button-secondary px-3 py-2 font-mono text-xs opacity-50 cursor-not-allowed" : 
+                  "retro-button-secondary px-3 py-2 font-mono text-xs"}
               >
-                +1 Week
+                +1 WEEK
               </button>
               <button 
                 onClick={() => increaseTime(2592000)} // 30 days
                 disabled={loading || !isConnected}
-                style={loading || !isConnected ? { ...buttonStyle, backgroundColor: '#ef4444', opacity: 0.6 } : { ...buttonStyle, backgroundColor: '#ef4444' }}
+                className={loading || !isConnected ? 
+                  "retro-button-secondary px-3 py-2 font-mono text-xs opacity-50 cursor-not-allowed" : 
+                  "retro-button-secondary px-3 py-2 font-mono text-xs"}
               >
-                +30 Days
+                +30 DAYS
               </button>
             </div>
           </div>
 
           {/* Status Messages */}
           {error && (
-            <div style={{ padding: '12px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', marginBottom: '16px' }}>
-              <div style={{ color: '#dc2626', fontSize: '14px' }}>{error}</div>
+            <div className="terminal-window p-3 mb-4 border-retro-red">
+              <div className="font-mono text-sm" style={{ color: "var(--retro-red)" }}>
+                [ERROR] {error}
+              </div>
             </div>
           )}
 
           {success && (
-            <div style={{ padding: '12px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', marginBottom: '16px' }}>
-              <div style={{ color: '#16a34a', fontSize: '14px' }}>{success}</div>
+            <div className="terminal-window p-3 mb-4 border-retro-green">
+              <div className="font-mono text-sm" style={{ color: "var(--retro-green)" }}>
+                [SUCCESS] {success}
+              </div>
             </div>
           )}
 
           {!isConnected && (
-            <div style={{ padding: '12px', backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '6px' }}>
-              <div style={{ color: '#0369a1', fontSize: '14px' }}>
-                Connect your wallet to control oracle time
+            <div className="terminal-window p-3 border-retro-amber">
+              <div className="font-mono text-sm" style={{ color: "var(--retro-amber)" }}>
+                [WARNING] CONNECT YOUR WALLET TO CONTROL ORACLE TIME
               </div>
             </div>
           )}
