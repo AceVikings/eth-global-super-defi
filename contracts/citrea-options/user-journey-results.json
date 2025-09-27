@@ -1,0 +1,27 @@
+{
+  "testName": "Layered Options User Journey",
+  "network": "Citrea Testnet",
+  "startTime": "2025-09-27T15:28:35.024Z",
+  "endTime": "2025-09-27T15:28:36.783Z",
+  "participants": {
+    "creator": "0xE2Ccad70370800c5319261Be716B41732F802f62",
+    "user1": "0xB492A9B2a67e6f29A0E3600DbB2D32355F4B7e07",
+    "user2": "0x6DE577E1bB2F772aA5fa895Ff2F6CD6B2847502e"
+  },
+  "transactions": [],
+  "summary": {
+    "parentOptionCreated": {
+      "tokenId": "",
+      "strike": "",
+      "premium": ""
+    },
+    "childOptionsCreated": [],
+    "transfers": [],
+    "exercises": [],
+    "capitalEfficiency": {
+      "traditionalCollateral": "",
+      "layeredCollateral": "",
+      "savings": ""
+    }
+  }
+}

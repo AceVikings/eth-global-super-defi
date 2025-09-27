@@ -3,7 +3,9 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { optionsRouter } from './routes/options.js';
 import { contractsRouter } from './routes/contracts.js';
+import { layeredOptionsRouter } from './routes/layeredOptions.js';
 import { indexer } from './services/indexer.js';
+import { layeredIndexer } from './services/layeredIndexer.js';
 
 dotenv.config();
 
@@ -26,9 +28,11 @@ app.get('/health', (req, res) => {
 // Routes
 app.use('/api/options', optionsRouter);
 app.use('/api/contracts', contractsRouter);
+app.use('/api/layered-options', layeredOptionsRouter);
 
-// Start indexer
+// Start indexers
 indexer.start();
+layeredIndexer.start();
 
 app.listen(PORT, () => {
   console.log(`🚀 Citrea Options Backend running on port ${PORT}`);

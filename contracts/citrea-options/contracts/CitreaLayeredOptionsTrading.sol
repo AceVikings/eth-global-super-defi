@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
@@ -11,6 +12,8 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
  */
 contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
     
+    enum OptionType { CALL, PUT }
+    
     // Simplified structs to avoid stack depth issues
     struct LayeredOption {
         address baseAsset;
@@ -18,6 +21,9 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
         uint256 expiry;
         uint256 premium;
         uint256 parentTokenId;
+        OptionType optionType;
+        address premiumToken; // Stablecoin for premium payments
+        bool isExercised;
     }
 
     // Core state variables
@@ -42,10 +48,23 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
         uint256 strikePrice,
         uint256 expiry,
         uint256 premium,
-        uint256 parentTokenId
-    ) external onlyOwner nonReentrant returns (uint256) {
+        uint256 parentTokenId,
+        OptionType optionType,
+        address premiumToken
+    ) external payable nonReentrant returns (uint256) {
         require(supportedAssets[baseAsset], "Asset not supported");
         require(expiry > block.timestamp, "Invalid expiry");
+        
+        // Handle premium payment
+        if (premium > 0) {
+            if (premiumToken == address(0)) {
+                // ETH payment
+                require(msg.value >= premium, "Insufficient ETH premium");
+            } else {
+                // ERC20 token payment
+                require(IERC20(premiumToken).transferFrom(msg.sender, address(this), premium), "Premium payment failed");
+            }
+        }
         
         uint256 tokenId = nextTokenId++;
         
@@ -54,7 +73,10 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
             strikePrice: strikePrice,
             expiry: expiry,
             premium: premium,
-            parentTokenId: parentTokenId
+            parentTokenId: parentTokenId,
+            optionType: optionType,
+            premiumToken: premiumToken,
+            isExercised: false
         });
         
         _mint(msg.sender, tokenId, 1, "");
@@ -68,8 +90,12 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
      */
     function exerciseOption(uint256 tokenId) external nonReentrant {
         require(balanceOf(msg.sender, tokenId) > 0, "Not option holder");
-        LayeredOption memory option = options[tokenId];
+        LayeredOption storage option = options[tokenId];
         require(block.timestamp <= option.expiry, "Option expired");
+        require(!option.isExercised, "Option already exercised");
+        
+        // Mark as exercised
+        option.isExercised = true;
         
         // Simple exercise logic - can be expanded
         _burn(msg.sender, tokenId, 1);
@@ -81,11 +107,25 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
     function createChildOption(
         uint256 parentTokenId,
         uint256 newStrikePrice,
-        uint256 newExpiry
-    ) external nonReentrant returns (uint256) {
+        uint256 newExpiry,
+        OptionType optionType
+    ) external payable nonReentrant returns (uint256) {
         require(balanceOf(msg.sender, parentTokenId) > 0, "Not parent holder");
         LayeredOption memory parent = options[parentTokenId];
         require(block.timestamp <= parent.expiry, "Parent expired");
+        
+        uint256 childPremium = parent.premium / 2; // Simple premium calculation
+        
+        // Handle premium payment for child option
+        if (childPremium > 0) {
+            if (parent.premiumToken == address(0)) {
+                // ETH payment
+                require(msg.value >= childPremium, "Insufficient ETH premium");
+            } else {
+                // ERC20 token payment
+                require(IERC20(parent.premiumToken).transferFrom(msg.sender, address(this), childPremium), "Premium payment failed");
+            }
+        }
         
         uint256 childTokenId = nextTokenId++;
         
@@ -93,8 +133,11 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
             baseAsset: parent.baseAsset,
             strikePrice: newStrikePrice,
             expiry: newExpiry,
-            premium: parent.premium / 2, // Simple premium calculation
-            parentTokenId: parentTokenId
+            premium: childPremium,
+            parentTokenId: parentTokenId,
+            optionType: optionType,
+            premiumToken: parent.premiumToken,
+            isExercised: false
         });
         
         _mint(msg.sender, childTokenId, 1, "");
@@ -116,7 +159,6 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
     function getOption(uint256 tokenId) external view returns (LayeredOption memory) {
         return options[tokenId];
     }
-    
     /**
      * @dev Check if option is expired
      */
@@ -132,44 +174,6 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
         uint256[] memory children = new uint256[](1);
         children[0] = parentTokenId + 1; // Demo implementation
         return children;
-    }
-    
-    /**
-     * @dev Batch create layered options
-     */
-    function batchCreateOptions(
-        address[] calldata baseAssets,
-        uint256[] calldata strikePrices,
-        uint256[] calldata expiries,
-        uint256[] calldata premiums
-    ) external onlyOwner nonReentrant returns (uint256[] memory) {
-        require(baseAssets.length == strikePrices.length, "Array length mismatch");
-        require(baseAssets.length == expiries.length, "Array length mismatch");
-        require(baseAssets.length == premiums.length, "Array length mismatch");
-        
-        uint256[] memory tokenIds = new uint256[](baseAssets.length);
-        
-        for (uint256 i = 0; i < baseAssets.length; i++) {
-            require(supportedAssets[baseAssets[i]], "Asset not supported");
-            require(expiries[i] > block.timestamp, "Invalid expiry");
-            
-            uint256 tokenId = nextTokenId++;
-            
-            options[tokenId] = LayeredOption({
-                baseAsset: baseAssets[i],
-                strikePrice: strikePrices[i],
-                expiry: expiries[i],
-                premium: premiums[i],
-                parentTokenId: 0 // Root option
-            });
-            
-            tokenIds[i] = tokenId;
-            _mint(msg.sender, tokenId, 1, "");
-            
-            emit LayeredOptionCreated(tokenId, baseAssets[i], strikePrices[i]);
-        }
-        
-        return tokenIds;
     }
     
     /**
