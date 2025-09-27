@@ -1,30 +1,23 @@
 import { useWriteContract, useReadContract, useWaitForTransactionReceipt } from 'wagmi';
 import { parseEther, parseUnits, formatUnits } from 'viem';
-import { CONTRACT_ADDRESSES, LAYERED_OPTIONS_ABI, MOCK_ERC20_ABI } from '../contracts/config';
+import { CONTRACT_ADDRESSES, LAYERED_OPTIONS_ABI, MOCK_ERC20_ABI, OptionType, type LayeredOption } from '../contracts/config';
 import { useState } from 'react';
-
-export interface LayeredOption {
-  creator: string;
-  baseAsset: string;
-  strikePrice: bigint;
-  expirationTime: bigint;
-  premium: bigint;
-  isExercised: boolean;
-  parentId: bigint;
-}
 
 export interface CreateOptionParams {
   baseAsset: string;
   strikePrice: string; // In dollars (e.g., "45000")
   expirationDays: number;
-  premiumETH: string; // In ETH (e.g., "0.001")
+  premium: string; // Premium amount
+  premiumToken: string; // Premium token address (0x0 for ETH)
+  optionType: OptionType; // CALL or PUT
+  parentTokenId?: number; // 0 for root options
 }
 
 export interface CreateChildOptionParams {
   parentId: number;
   strikePrice: string; // In dollars
   expirationDays: number;
-  premiumETH: string; // In ETH
+  optionType: OptionType; // CALL or PUT
 }
 
 export function useLayeredOptions() {
@@ -67,14 +60,25 @@ export function useLayeredOptions() {
       setIsCreating(true);
       const strikePrice = parseUnits(params.strikePrice, 18);
       const expirationTime = BigInt(Math.floor(Date.now() / 1000) + params.expirationDays * 24 * 60 * 60);
-      const premium = parseEther(params.premiumETH);
+      const premium = params.premiumToken === '0x0000000000000000000000000000000000000000' 
+        ? parseEther(params.premium) 
+        : parseUnits(params.premium, 6); // Assuming USDC is 6 decimals
+      const parentTokenId = BigInt(params.parentTokenId || 0);
 
       await writeCreateOption({
         address: CONTRACT_ADDRESSES.LAYERED_OPTIONS_TRADING,
         abi: LAYERED_OPTIONS_ABI,
         functionName: 'createLayeredOption',
-        args: [params.baseAsset as `0x${string}`, strikePrice, expirationTime],
-        value: premium,
+        args: [
+          params.baseAsset as `0x${string}`, 
+          strikePrice, 
+          expirationTime, 
+          premium,
+          parentTokenId,
+          params.optionType,
+          params.premiumToken as `0x${string}`
+        ],
+        value: params.premiumToken === '0x0000000000000000000000000000000000000000' ? premium : 0n,
       });
     } catch (error) {
       setIsCreating(false);
@@ -88,14 +92,17 @@ export function useLayeredOptions() {
       setIsCreatingChild(true);
       const strikePrice = parseUnits(params.strikePrice, 18);
       const expirationTime = BigInt(Math.floor(Date.now() / 1000) + params.expirationDays * 24 * 60 * 60);
-      const premium = parseEther(params.premiumETH);
 
       await writeCreateChild({
         address: CONTRACT_ADDRESSES.LAYERED_OPTIONS_TRADING,
         abi: LAYERED_OPTIONS_ABI,
         functionName: 'createChildOption',
-        args: [BigInt(params.parentId), strikePrice, expirationTime],
-        value: premium,
+        args: [
+          BigInt(params.parentId), 
+          strikePrice, 
+          expirationTime,
+          params.optionType
+        ],
       });
     } catch (error) {
       setIsCreatingChild(false);
@@ -196,13 +203,14 @@ export function useOptionDetails(tokenId?: number) {
   });
 
   const option: LayeredOption | undefined = optionData ? {
-    creator: optionData.creator,
     baseAsset: optionData.baseAsset,
     strikePrice: optionData.strikePrice,
-    expirationTime: optionData.expirationTime,
+    expiry: optionData.expiry,
     premium: optionData.premium,
+    parentTokenId: optionData.parentTokenId,
+    optionType: optionData.optionType as OptionType,
+    premiumToken: optionData.premiumToken,
     isExercised: optionData.isExercised,
-    parentId: optionData.parentId,
   } : undefined;
 
   return {
@@ -212,8 +220,9 @@ export function useOptionDetails(tokenId?: number) {
     // Formatted values for display
     formattedStrike: option ? formatUnits(option.strikePrice, 18) : '0',
     formattedPremium: option ? formatUnits(option.premium, 18) : '0',
-    expirationDate: option ? new Date(Number(option.expirationTime) * 1000) : null,
-    isExpired: option ? Number(option.expirationTime) * 1000 < Date.now() : false,
+    expirationDate: option ? new Date(Number(option.expiry) * 1000) : null,
+    isExpired: option ? Number(option.expiry) * 1000 < Date.now() : false,
+    optionTypeText: option ? (option.optionType === OptionType.CALL ? 'CALL' : 'PUT') : 'Unknown',
   };
 }
 

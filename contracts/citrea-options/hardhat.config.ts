@@ -51,8 +51,8 @@ const config: HardhatUserConfig = {
       url: "https://rpc.testnet.citrea.xyz",
       chainId: 5115,
       accounts: [configVariable("CITREA_PRIVATE_KEY")],
-      gas: 30000000, // 30M gas limit
-      gasPrice: 20000000000, // 20 gwei
+      gas: 8000000, // 8M gas limit (reduced)
+      gasPrice: 1000000000, // 1 gwei (reduced) 
       timeout: 120000, // 2 minutes timeout
     },
   },

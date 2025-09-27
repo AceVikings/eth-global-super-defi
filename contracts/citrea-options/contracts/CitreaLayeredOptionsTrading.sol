@@ -29,16 +29,50 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
     // Core state variables
     mapping(uint256 => LayeredOption) public options;
     mapping(address => bool) public supportedAssets;
+    address public stablecoin; // Stablecoin address for child option premiums
     uint256 private nextTokenId = 1;
     
-    // Events
-    event LayeredOptionCreated(uint256 indexed tokenId, address indexed baseAsset, uint256 strikePrice);
+    // Premium calculation constants
+    uint256 public constant BASE_PREMIUM_RATE = 100; // 0.01% = 100 basis points per 1000
+    uint256 public constant BASIS_POINTS = 10000;
     
-    constructor(address initialOwner) 
+    // Events
+    event LayeredOptionCreated(
+        uint256 indexed tokenId, 
+        address indexed creator,
+        address indexed baseAsset, 
+        uint256 strikePrice,
+        uint256 expiry,
+        uint256 premium,
+        uint256 parentTokenId,
+        OptionType optionType,
+        address premiumToken
+    );
+    
+    event ChildOptionCreated(
+        uint256 indexed tokenId,
+        uint256 indexed parentTokenId,
+        address indexed creator,
+        uint256 strikePrice,
+        uint256 expiry,
+        OptionType optionType
+    );
+    
+    event OptionExercised(
+        uint256 indexed tokenId,
+        address indexed exerciser,
+        uint256 payout,
+        bool isExercised
+    );
+    
+    constructor(address initialOwner, address _stablecoin) 
         ERC1155("https://metadata.citreaoptions.com/{id}")
         Ownable(initialOwner)
         ReentrancyGuard()
-    {}
+    {
+        require(_stablecoin != address(0), "Invalid stablecoin address");
+        stablecoin = _stablecoin;
+    }
     
     /**
      * @dev Create a layered option token
@@ -81,7 +115,17 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
         
         _mint(msg.sender, tokenId, 1, "");
         
-        emit LayeredOptionCreated(tokenId, baseAsset, strikePrice);
+        emit LayeredOptionCreated(
+            tokenId,
+            msg.sender,
+            baseAsset,
+            strikePrice,
+            expiry,
+            premium,
+            parentTokenId,
+            optionType,
+            premiumToken
+        );
         return tokenId;
     }
     
@@ -99,51 +143,137 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
         
         // Simple exercise logic - can be expanded
         _burn(msg.sender, tokenId, 1);
+        
+        emit OptionExercised(tokenId, msg.sender, 0, true); // payout=0 for now
     }
     
     /**
-     * @dev Create child option from parent
+     * @dev Create child option from parent with automatic validation and premium calculation
+     * Child of CALL can only be CALL at higher strike, child of PUT can only be PUT at lower strike
+     * Premium is always paid in stablecoin
      */
     function createChildOption(
         uint256 parentTokenId,
         uint256 newStrikePrice,
-        uint256 newExpiry,
-        OptionType optionType
-    ) external payable nonReentrant returns (uint256) {
+        uint256 newExpiry  // 0 means use parent expiry
+    ) external nonReentrant returns (uint256) {
         require(balanceOf(msg.sender, parentTokenId) > 0, "Not parent holder");
         LayeredOption memory parent = options[parentTokenId];
         require(block.timestamp <= parent.expiry, "Parent expired");
+        require(!parent.isExercised, "Parent exercised");
         
-        uint256 childPremium = parent.premium / 2; // Simple premium calculation
-        
-        // Handle premium payment for child option
-        if (childPremium > 0) {
-            if (parent.premiumToken == address(0)) {
-                // ETH payment
-                require(msg.value >= childPremium, "Insufficient ETH premium");
-            } else {
-                // ERC20 token payment
-                require(IERC20(parent.premiumToken).transferFrom(msg.sender, address(this), childPremium), "Premium payment failed");
-            }
+        // Validate strike price based on option type
+        if (parent.optionType == OptionType.CALL) {
+            require(newStrikePrice > parent.strikePrice, "Child CALL strike must be higher than parent");
+        } else {
+            require(newStrikePrice < parent.strikePrice, "Child PUT strike must be lower than parent");
         }
+        
+        // Handle expiry - default to parent expiry if 0
+        uint256 childExpiry = newExpiry == 0 ? parent.expiry : newExpiry;
+        require(childExpiry <= parent.expiry, "Child expiry cannot exceed parent");
+        require(childExpiry > block.timestamp, "Child expiry must be in future");
+        
+        // Calculate premium based on strike differential and time remaining
+        uint256 childPremium = _calculateChildPremium(
+            parent.strikePrice,
+            newStrikePrice,
+            parent.expiry,
+            childExpiry,
+            parent.optionType
+        );
+        
+        // Premium is always paid in stablecoin for child options
+        require(IERC20(stablecoin).transferFrom(msg.sender, address(this), childPremium), "Stablecoin premium payment failed");
         
         uint256 childTokenId = nextTokenId++;
         
         options[childTokenId] = LayeredOption({
             baseAsset: parent.baseAsset,
             strikePrice: newStrikePrice,
-            expiry: newExpiry,
+            expiry: childExpiry,
             premium: childPremium,
             parentTokenId: parentTokenId,
-            optionType: optionType,
-            premiumToken: parent.premiumToken,
+            optionType: parent.optionType, // Same type as parent
+            premiumToken: stablecoin, // Always stablecoin for children
             isExercised: false
         });
         
         _mint(msg.sender, childTokenId, 1, "");
         
-        emit LayeredOptionCreated(childTokenId, parent.baseAsset, newStrikePrice);
+        emit ChildOptionCreated(
+            childTokenId,
+            parentTokenId,
+            msg.sender,
+            newStrikePrice,
+            childExpiry,
+            parent.optionType
+        );
         return childTokenId;
+    }
+    
+    /**
+     * @dev Calculate child option premium based on strike differential and time
+     */
+    function _calculateChildPremium(
+        uint256 parentStrike,
+        uint256 childStrike,
+        uint256 parentExpiry,
+        uint256 childExpiry,
+        OptionType optionType
+    ) internal view returns (uint256) {
+        uint256 strikeDiff;
+        
+        if (optionType == OptionType.CALL) {
+            strikeDiff = childStrike - parentStrike;
+        } else {
+            strikeDiff = parentStrike - childStrike;
+        }
+        
+        // Time ratio: how much of the parent's time the child uses
+        uint256 timeRatio = (childExpiry - block.timestamp) * BASIS_POINTS / (parentExpiry - block.timestamp);
+        
+        // Premium = strike differential * time ratio * base rate
+        // This gives a premium proportional to risk and time
+        uint256 premium = (strikeDiff * timeRatio * BASE_PREMIUM_RATE) / (BASIS_POINTS * BASIS_POINTS);
+        
+        // Minimum premium of 0.001 USDC (1000 wei for 6 decimals)
+        // For USDC with 6 decimals: 0.001 = 1000 wei
+        uint256 minPremium = 1000; // 0.001 USDC in 6 decimal wei
+        return premium < minPremium ? minPremium : premium;
+    }
+    
+    /**
+     * @dev Preview child option premium without creating the option
+     */
+    function calculateChildPremium(
+        uint256 parentTokenId,
+        uint256 newStrikePrice,
+        uint256 newExpiry
+    ) external view returns (uint256) {
+        require(options[parentTokenId].baseAsset != address(0), "Parent option does not exist");
+        LayeredOption memory parent = options[parentTokenId];
+        require(!parent.isExercised, "Parent exercised");
+        require(block.timestamp <= parent.expiry, "Parent expired");
+        
+        // Validate strike price
+        if (parent.optionType == OptionType.CALL) {
+            require(newStrikePrice > parent.strikePrice, "Child CALL strike must be higher than parent");
+        } else {
+            require(newStrikePrice < parent.strikePrice, "Child PUT strike must be lower than parent");
+        }
+        
+        uint256 childExpiry = newExpiry == 0 ? parent.expiry : newExpiry;
+        require(childExpiry <= parent.expiry, "Child expiry cannot exceed parent");
+        require(childExpiry > block.timestamp, "Child expiry must be in future");
+        
+        return _calculateChildPremium(
+            parent.strikePrice,
+            newStrikePrice,
+            parent.expiry,
+            childExpiry,
+            parent.optionType
+        );
     }
     
     /**

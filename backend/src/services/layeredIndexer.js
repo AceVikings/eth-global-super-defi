@@ -16,9 +16,9 @@ const LAYERED_OPTIONS_ADDRESS = '0x5159326b4faf867eb45c324842e77543a8eae63d';
 
 // Events to track
 const EVENTS = {
-  OptionCreated: parseAbiItem('event OptionCreated(uint256 indexed tokenId, address indexed creator, address indexed baseAsset, uint256 strikePrice, uint256 expirationTime, uint256 premium, uint256 parentId)'),
-  ChildOptionCreated: parseAbiItem('event ChildOptionCreated(uint256 indexed tokenId, uint256 indexed parentId, address indexed creator, uint256 strikePrice, uint256 expirationTime, uint256 premium)'),
-  OptionExercised: parseAbiItem('event OptionExercised(uint256 indexed tokenId, address indexed exerciser, uint256 payout)'),
+  LayeredOptionCreated: parseAbiItem('event LayeredOptionCreated(uint256 indexed tokenId, address indexed creator, address indexed baseAsset, uint256 strikePrice, uint256 expiry, uint256 premium, uint256 parentTokenId, uint8 optionType, address premiumToken)'),
+  ChildOptionCreated: parseAbiItem('event ChildOptionCreated(uint256 indexed tokenId, uint256 indexed parentTokenId, address indexed creator, uint256 strikePrice, uint256 expiry, uint8 optionType)'),
+  OptionExercised: parseAbiItem('event OptionExercised(uint256 indexed tokenId, address indexed exerciser, uint256 payout, bool isExercised)'),
   TransferSingle: parseAbiItem('event TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value)'),
 };
 
@@ -58,10 +58,10 @@ class LayeredOptionsIndexer {
     try {
       const currentBlock = await this.client.getBlockNumber();
       
-      // Index OptionCreated events
+      // Index LayeredOptionCreated events
       const optionCreatedLogs = await this.client.getLogs({
         address: LAYERED_OPTIONS_ADDRESS,
-        event: EVENTS.OptionCreated,
+        event: EVENTS.LayeredOptionCreated,
         fromBlock: this.lastProcessedBlock,
         toBlock: currentBlock,
       });
@@ -108,7 +108,7 @@ class LayeredOptionsIndexer {
   async processOptionCreatedEvents(logs) {
     for (const log of logs) {
       try {
-        const { tokenId, creator, baseAsset, strikePrice, expirationTime, premium, parentId } = log.args;
+        const { tokenId, creator, baseAsset, strikePrice, expiry, premium, parentTokenId, optionType, premiumToken } = log.args;
         
         const block = await this.client.getBlock({ blockHash: log.blockHash });
         
@@ -117,11 +117,13 @@ class LayeredOptionsIndexer {
           creator: getAddress(creator),
           baseAsset: getAddress(baseAsset),
           strikePrice: strikePrice.toString(),
-          expirationTime: expirationTime.toString(),
+          expiry: expiry.toString(),
           premium: premium.toString(),
-          parentId: parentId.toString(),
+          parentTokenId: parentTokenId.toString(),
+          optionType: optionType.toString(), // 0 = CALL, 1 = PUT
+          premiumToken: premiumToken,
           isExercised: false,
-          isParent: parentId.toString() === '0',
+          isParent: parentTokenId.toString() === '0',
           blockNumber: Number(log.blockNumber),
           blockHash: log.blockHash,
           transactionHash: log.transactionHash,
@@ -129,23 +131,26 @@ class LayeredOptionsIndexer {
           // Formatted values for easier consumption
           formattedStrike: formatUnits(strikePrice, 18),
           formattedPremium: formatUnits(premium, 18),
-          expirationDate: new Date(Number(expirationTime) * 1000).toISOString(),
-          isExpired: Number(expirationTime) * 1000 < Date.now(),
+          expirationDate: new Date(Number(expiry) * 1000).toISOString(),
+          isExpired: Number(expiry) * 1000 < Date.now(),
+          optionTypeText: optionType === 0 ? 'CALL' : 'PUT',
+          premiumTokenText: premiumToken === '0x0000000000000000000000000000000000000000' ? 'cBTC' : 'USDC',
         };
 
         this.options.set(tokenId.toString(), option);
         
         // Add to transaction history
         this.transactions.push({
-          type: option.isParent ? 'OPTION_CREATED' : 'CHILD_OPTION_CREATED',
+          type: option.isParent ? 'LAYERED_OPTION_CREATED' : 'CHILD_OPTION_CREATED',
           tokenId: option.tokenId,
           creator: option.creator,
-          parentId: option.parentId,
+          parentTokenId: option.parentTokenId,
+          optionType: option.optionTypeText,
           timestamp: option.timestamp,
           transactionHash: option.transactionHash,
         });
 
-        console.log(`📝 ${option.isParent ? 'Parent' : 'Child'} option created: Token #${tokenId}`);
+        console.log(`📝 ${option.isParent ? 'Parent' : 'Child'} ${option.optionTypeText} option created: Token #${tokenId}`);
         
       } catch (error) {
         console.error('Error processing option created event:', error);
@@ -156,11 +161,11 @@ class LayeredOptionsIndexer {
   async processOptionExercisedEvents(logs) {
     for (const log of logs) {
       try {
-        const { tokenId, exerciser, payout } = log.args;
+        const { tokenId, exerciser, payout, isExercised } = log.args;
         
         const option = this.options.get(tokenId.toString());
         if (option) {
-          option.isExercised = true;
+          option.isExercised = isExercised;
           option.exerciser = getAddress(exerciser);
           option.payout = payout.toString();
           option.formattedPayout = formatUnits(payout, 18);
@@ -174,6 +179,7 @@ class LayeredOptionsIndexer {
           tokenId: tokenId.toString(),
           exerciser: getAddress(exerciser),
           payout: payout.toString(),
+          isExercised: isExercised,
           timestamp: Number(block.timestamp) * 1000,
           transactionHash: log.transactionHash,
         });

@@ -7,7 +7,7 @@ export const CONTRACT_ADDRESSES = {
   STABLECOIN: "0x807fcda7a2d39f5cf52dc84a05477bb6857b7f80" as `0x${string}`,
 } as const;
 
-// Layered Options Trading ABI (simplified for frontend)
+// Layered Options Trading ABI (updated with call/put support)
 export const LAYERED_OPTIONS_ABI = [
   {
     inputs: [{ name: "asset", type: "address" }],
@@ -20,7 +20,11 @@ export const LAYERED_OPTIONS_ABI = [
     inputs: [
       { name: "baseAsset", type: "address" },
       { name: "strikePrice", type: "uint256" },
-      { name: "expirationTime", type: "uint256" },
+      { name: "expiry", type: "uint256" },
+      { name: "premium", type: "uint256" },
+      { name: "parentTokenId", type: "uint256" },
+      { name: "optionType", type: "uint8" }, // 0 = CALL, 1 = PUT
+      { name: "premiumToken", type: "address" }, // Address of premium token (0x0 for ETH)
     ],
     name: "createLayeredOption",
     outputs: [{ name: "", type: "uint256" }],
@@ -29,9 +33,10 @@ export const LAYERED_OPTIONS_ABI = [
   },
   {
     inputs: [
-      { name: "parentId", type: "uint256" },
-      { name: "childStrike", type: "uint256" },
-      { name: "childExpiry", type: "uint256" },
+      { name: "parentTokenId", type: "uint256" },
+      { name: "newStrikePrice", type: "uint256" },
+      { name: "newExpiry", type: "uint256" },
+      { name: "optionType", type: "uint8" }, // 0 = CALL, 1 = PUT
     ],
     name: "createChildOption",
     outputs: [{ name: "", type: "uint256" }],
@@ -64,13 +69,14 @@ export const LAYERED_OPTIONS_ABI = [
     outputs: [
       {
         components: [
-          { name: "creator", type: "address" },
           { name: "baseAsset", type: "address" },
           { name: "strikePrice", type: "uint256" },
-          { name: "expirationTime", type: "uint256" },
+          { name: "expiry", type: "uint256" },
           { name: "premium", type: "uint256" },
+          { name: "parentTokenId", type: "uint256" },
+          { name: "optionType", type: "uint8" },
+          { name: "premiumToken", type: "address" },
           { name: "isExercised", type: "bool" },
-          { name: "parentId", type: "uint256" },
         ],
         name: "",
         type: "tuple",
@@ -141,4 +147,51 @@ export const MOCK_ERC20_ABI = [
     stateMutability: "view",
     type: "function",
   },
+  {
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    name: "isOptionExpired",
+    outputs: [{ name: "", type: "bool" }],
+    stateMutability: "view",
+    type: "function",
+  },
 ] as const;
+
+// Option types
+export const OptionType = {
+  CALL: 0,
+  PUT: 1,
+} as const;
+
+export type OptionType = typeof OptionType[keyof typeof OptionType];
+
+// Type definitions
+export interface LayeredOption {
+  baseAsset: `0x${string}`;
+  strikePrice: bigint;
+  expiry: bigint;
+  premium: bigint;
+  parentTokenId: bigint;
+  optionType: OptionType;
+  premiumToken: `0x${string}`;
+  isExercised: boolean;
+}
+
+// Supported assets for different option types
+export const SUPPORTED_ASSETS = {
+  CALL: {
+    BTC: {
+      address: CONTRACT_ADDRESSES.MOCK_WBTC,
+      symbol: "BTC",
+      name: "Bitcoin",
+      decimals: 18,
+    },
+  },
+  PUT: {
+    USD: {
+      address: CONTRACT_ADDRESSES.STABLECOIN,
+      symbol: "USDC",
+      name: "USD Coin",
+      decimals: 6,
+    },
+  },
+} as const;

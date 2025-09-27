@@ -5,7 +5,15 @@
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+interface RequestOptions {
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string;
+}
+
 class ApiService {
+  private baseUrl: string;
+
   constructor() {
     this.baseUrl = API_BASE_URL;
   }
@@ -13,9 +21,9 @@ class ApiService {
   /**
    * Generic HTTP request handler with error handling
    */
-  async request(endpoint, options = {}) {
+  async request(endpoint: string, options: RequestOptions = {}): Promise<any> {
     const url = `${this.baseUrl}${endpoint}`;
-    const config = {
+    const config: RequestInit = {
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -47,11 +55,11 @@ class ApiService {
   /**
    * Get all available options
    */
-  async getOptions(filters = {}) {
+  async getOptions(filters: Record<string, any> = {}) {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
-        params.append(key, value);
+        params.append(key, String(value));
       }
     });
     
@@ -60,40 +68,33 @@ class ApiService {
   }
 
   /**
-   * Get options for a specific user
+   * Get user's options by address
    */
-  async getUserOptions(address) {
+  async getUserOptions(address: string) {
     return this.request(`/api/options/user/${address}`);
   }
 
   /**
-   * Get user token balances
+   * Get user balances for multiple tokens
    */
-  async getUserBalances(address) {
-    return this.request(`/api/options/balances/${address}`);
+  async getUserBalances(address: string) {
+    return this.request(`/api/balances/${address}`);
   }
 
   /**
-   * Get market data for options trading
+   * Calculate option premium based on parameters
    */
-  async getMarketData() {
-    return this.request('/api/options/market');
-  }
-
-  /**
-   * Calculate premium for an option
-   */
-  async calculatePremium(params) {
-    return this.request('/api/options/premium', {
+  async calculatePremium(params: any) {
+    return this.request('/api/options/calculate-premium', {
       method: 'POST',
-      body: JSON.stringify(params)
+      body: JSON.stringify(params),
     });
   }
 
   /**
-   * Get option details by ID
+   * Get detailed option information
    */
-  async getOptionDetails(optionId) {
+  async getOptionDetails(optionId: string | number) {
     return this.request(`/api/options/${optionId}`);
   }
 
@@ -120,12 +121,21 @@ class ApiService {
     return this.request('/api/contracts/network');
   }
 
+  // ===== MARKET DATA API =====
+
+  /**
+   * Get market data for assets
+   */
+  async getMarketData() {
+    return this.request('/api/market-data');
+  }
+
   // ===== WEBSOCKET CONNECTION =====
   
   /**
    * Connect to real-time updates (if websocket is implemented)
    */
-  connectRealtime(callbacks = {}) {
+  connectRealtime(_callbacks: Record<string, any> = {}) {
     // For future WebSocket implementation
     console.log('Real-time connection not yet implemented');
   }
@@ -142,12 +152,12 @@ export const {
   getOptions,
   getUserOptions,
   getUserBalances,
-  getMarketData,
   calculatePremium,
   getOptionDetails,
   getContracts,
   getContractABIs,
   getNetworkConfig,
+  getMarketData,
   connectRealtime
 } = apiService;
 

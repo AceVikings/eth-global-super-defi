@@ -14,7 +14,7 @@ import {
   useUserLayeredOptions,
   useCapitalEfficiencyStats
 } from '../services/layeredOptionsAPI';
-import { CONTRACT_ADDRESSES } from '../contracts/config';
+import { CONTRACT_ADDRESSES, OptionType } from '../contracts/config';
 
 const LayeredOptionsPage = () => {
   const { address, isConnected } = useAccount();
@@ -27,14 +27,17 @@ const LayeredOptionsPage = () => {
     baseAsset: CONTRACT_ADDRESSES.MOCK_WBTC,
     strikePrice: '45000',
     expirationDays: 30,
-    premiumETH: '0.001',
+    premium: '0.001',
+    premiumToken: '0x0000000000000000000000000000000000000000', // ETH
+    optionType: OptionType.CALL,
+    parentTokenId: 0,
   });
 
   const [childForm, setChildForm] = useState<CreateChildOptionParams>({
     parentId: 1,
     strikePrice: '46000',
     expirationDays: 15,
-    premiumETH: '0.0005',
+    optionType: OptionType.CALL,
   });
 
   const [transferForm, setTransferForm] = useState({
@@ -240,11 +243,33 @@ const LayeredOptionsPage = () => {
                     <label className="block text-sm font-semibold mb-2">Premium (cBTC)</label>
                     <input
                       type="text"
-                      value={createForm.premiumETH}
-                      onChange={(e) => setCreateForm({ ...createForm, premiumETH: e.target.value })}
+                      value={createForm.premium}
+                      onChange={(e) => setCreateForm({ ...createForm, premium: e.target.value })}
                       className="w-full px-4 py-3 rounded-lg border border-gray-300"
                       placeholder="0.001"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Option Type</label>
+                    <select
+                      value={createForm.optionType}
+                      onChange={(e) => setCreateForm({ ...createForm, optionType: parseInt(e.target.value) as OptionType })}
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white"
+                    >
+                      <option value={OptionType.CALL}>Call Option</option>
+                      <option value={OptionType.PUT}>Put Option</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Premium Payment Token</label>
+                    <select
+                      value={createForm.premiumToken}
+                      onChange={(e) => setCreateForm({ ...createForm, premiumToken: e.target.value })}
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white"
+                    >
+                      <option value="0x0000000000000000000000000000000000000000">cBTC (Native)</option>
+                      <option value={CONTRACT_ADDRESSES.STABLECOIN}>USDC (Stablecoin)</option>
+                    </select>
                   </div>
                   <button
                     type="submit"
@@ -298,15 +323,17 @@ const LayeredOptionsPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Child Premium (cBTC)</label>
-                    <input
-                      type="text"
-                      value={childForm.premiumETH}
-                      onChange={(e) => setChildForm({ ...childForm, premiumETH: e.target.value })}
+                    <label className="block text-sm font-semibold mb-2">Option Type</label>
+                    <select
+                      value={childForm.optionType}
+                      onChange={(e) => setChildForm({ ...childForm, optionType: parseInt(e.target.value) as OptionType })}
                       className="w-full px-4 py-3 rounded-lg border border-gray-300"
-                      placeholder="0.0005"
-                    />
+                    >
+                      <option value={OptionType.CALL}>Call Option</option>
+                      <option value={OptionType.PUT}>Put Option</option>
+                    </select>
                   </div>
+                  <p className="text-sm text-gray-600">* Premium will be automatically calculated as half of the parent option premium</p>
                   <button
                     type="submit"
                     disabled={!isConnected || isCreatingChild}
@@ -346,11 +373,12 @@ const LayeredOptionsPage = () => {
                 {viewOption && (
                   <div className="space-y-3">
                     <div className="bg-white/30 rounded-lg p-4">
-                      <p className="font-semibold">Creator: <span className="font-mono text-sm">{viewOption.creator}</span></p>
+                      <p className="font-semibold">Base Asset: <span className="font-mono text-sm">{viewOption.baseAsset}</span></p>
+                      <p className="font-semibold">Option Type: <span className={`${viewOption.optionType === OptionType.CALL ? 'text-green-600' : 'text-red-600'}`}>{viewOption.optionType === OptionType.CALL ? 'CALL' : 'PUT'}</span></p>
                       <p className="font-semibold">Strike Price: ${formattedStrike}</p>
-                      <p className="font-semibold">Premium: {formattedPremium} cBTC</p>
+                      <p className="font-semibold">Premium: {formattedPremium} {viewOption.premiumToken === '0x0000000000000000000000000000000000000000' ? 'cBTC' : 'USDC'}</p>
                       <p className="font-semibold">Expiration: {expirationDate?.toLocaleDateString()}</p>
-                      <p className="font-semibold">Parent ID: {viewOption.parentId.toString()}</p>
+                      <p className="font-semibold">Parent ID: {viewOption.parentTokenId.toString()}</p>
                       <p className={`font-semibold ${viewOption.isExercised ? 'text-red-600' : 'text-green-600'}`}>
                         Status: {viewOption.isExercised ? 'Exercised' : 'Active'}
                       </p>
