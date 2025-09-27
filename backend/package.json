@@ -1,0 +1,27 @@
+{
+  "name": "citrea-options-backend",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "defi",
+    "options",
+    "citrea",
+    "blockchain"
+  ],
+  "author": "",
+  "license": "MIT",
+  "description": "Backend indexer and API for Citrea Options Trading Platform",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "node-cron": "^4.2.1",
+    "viem": "^2.37.8"
+  }
+}
