@@ -103,33 +103,59 @@ const OptionsPage = () => {
           <div className="space-y-8">
             {/* Token Minting Section */}
             <div className="game-card bg-white">
-              <h2 className="text-xl font-bold mb-4" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>
+              <h2
+                className="text-xl font-bold mb-4"
+                style={{
+                  color: "var(--charcoal)",
+                  fontFamily: "'Press Start 2P', monospace",
+                }}
+              >
                 Mint Mock Tokens
               </h2>
-              <p className="mb-4" style={{ color: "var(--charcoal)" }}>Mint test tokens for options trading:</p>
+              <p className="mb-4" style={{ color: "var(--charcoal)" }}>
+                Mint test tokens for options trading:
+              </p>
               <TokenMinter />
             </div>
 
             <div className="game-card bg-white">
-              <h2 className="text-xl font-bold mb-4" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>
+              <h2
+                className="text-xl font-bold mb-4"
+                style={{
+                  color: "var(--charcoal)",
+                  fontFamily: "'Press Start 2P', monospace",
+                }}
+              >
                 Create New Option
               </h2>
 
               {error && (
-                <div className="bg-red-100 border-2 border-red-400 rounded p-3 mb-4" style={{ color: "var(--warm-red)" }}>
+                <div
+                  className="bg-red-100 border-2 border-red-400 rounded p-3 mb-4"
+                  style={{ color: "var(--warm-red)" }}
+                >
                   {error}
                 </div>
               )}
 
               {success && (
-                <div className="bg-green-100 border-2 border-green-400 rounded p-3 mb-4" style={{ color: "var(--light-green)" }}>
+                <div
+                  className="bg-green-100 border-2 border-green-400 rounded p-3 mb-4"
+                  style={{ color: "var(--light-green)" }}
+                >
                   {success}
                 </div>
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm mb-2 font-bold" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>
+                  <label
+                    className="block text-sm mb-2 font-bold"
+                    style={{
+                      color: "var(--charcoal)",
+                      fontFamily: "'Press Start 2P', monospace",
+                    }}
+                  >
                     Option Type
                   </label>
                   <select
@@ -148,7 +174,13 @@ const OptionsPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm mb-2 font-bold" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>
+                  <label
+                    className="block text-sm mb-2 font-bold"
+                    style={{
+                      color: "var(--charcoal)",
+                      fontFamily: "'Press Start 2P', monospace",
+                    }}
+                  >
                     Strike Price
                   </label>
                   <input
@@ -166,7 +198,13 @@ const OptionsPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm mb-2 font-bold" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>
+                  <label
+                    className="block text-sm mb-2 font-bold"
+                    style={{
+                      color: "var(--charcoal)",
+                      fontFamily: "'Press Start 2P', monospace",
+                    }}
+                  >
                     Expiry (Days)
                   </label>
                   <input
@@ -184,7 +222,13 @@ const OptionsPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm mb-2 font-bold" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>
+                  <label
+                    className="block text-sm mb-2 font-bold"
+                    style={{
+                      color: "var(--charcoal)",
+                      fontFamily: "'Press Start 2P', monospace",
+                    }}
+                  >
                     Contract Size
                   </label>
                   <input
@@ -202,7 +246,13 @@ const OptionsPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm mb-2 font-bold" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>
+                  <label
+                    className="block text-sm mb-2 font-bold"
+                    style={{
+                      color: "var(--charcoal)",
+                      fontFamily: "'Press Start 2P', monospace",
+                    }}
+                  >
                     Underlying Asset
                   </label>
                   <input
@@ -220,7 +270,13 @@ const OptionsPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm mb-2 font-bold" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>
+                  <label
+                    className="block text-sm mb-2 font-bold"
+                    style={{
+                      color: "var(--charcoal)",
+                      fontFamily: "'Press Start 2P', monospace",
+                    }}
+                  >
                     Collateral Token
                   </label>
                   <input
@@ -248,7 +304,13 @@ const OptionsPage = () => {
             </div>
 
             <div className="game-card bg-white">
-              <h2 className="text-xl font-bold mb-4" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>
+              <h2
+                className="text-xl font-bold mb-4"
+                style={{
+                  color: "var(--charcoal)",
+                  fontFamily: "'Press Start 2P', monospace",
+                }}
+              >
                 Purchase Option
               </h2>
               <p className="mb-4" style={{ color: "var(--charcoal)" }}>
@@ -256,7 +318,13 @@ const OptionsPage = () => {
               </p>
 
               <div className="mb-4">
-                <label className="block text-sm mb-2 font-bold" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>
+                <label
+                  className="block text-sm mb-2 font-bold"
+                  style={{
+                    color: "var(--charcoal)",
+                    fontFamily: "'Press Start 2P', monospace",
+                  }}
+                >
                   Option ID
                 </label>
                 <input
@@ -272,19 +340,27 @@ const OptionsPage = () => {
                 onClick={handlePurchaseOption}
                 disabled={purchasing || !optionId}
                 className="nintendo-button w-full disabled:opacity-50"
-                style={{ 
-                  background: purchasing || !optionId ? 'var(--light-gray)' : 'var(--light-green)',
-                  color: 'var(--charcoal)'
+                style={{
+                  background:
+                    purchasing || !optionId
+                      ? "var(--light-gray)"
+                      : "var(--light-green)",
+                  color: "var(--charcoal)",
                 }}
               >
                 {purchasing ? "Purchasing Option..." : "Purchase Option"}
               </button>
 
-              <div className="mt-4 text-sm" style={{ color: "var(--charcoal)" }}>
+              <div
+                className="mt-4 text-sm"
+                style={{ color: "var(--charcoal)" }}
+              >
                 <p className="mb-1">
                   • Make sure you have sufficient collateral/stablecoin balance
                 </p>
-                <p className="mb-1">• Premium will be calculated automatically</p>
+                <p className="mb-1">
+                  • Premium will be calculated automatically
+                </p>
                 <p>• Transaction will be sent to your connected wallet</p>
               </div>
             </div>

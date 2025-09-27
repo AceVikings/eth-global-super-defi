@@ -1,18 +1,18 @@
-import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
-import { useSmartContracts } from '../services/smartContracts';
+import { useState, useEffect } from "react";
+import { useAccount } from "wagmi";
+import { useSmartContracts } from "../services/smartContracts";
 
 const TokenMinter = () => {
-  const [mintAmount, setMintAmount] = useState('1000');
-  const [selectedToken, setSelectedToken] = useState('stablecoin');
+  const [mintAmount, setMintAmount] = useState("1000");
+  const [selectedToken, setSelectedToken] = useState("stablecoin");
   const [loading, setLoading] = useState(false);
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [balances, setBalances] = useState({
-    stablecoin: '0',
-    bitcoin: '0'
+    stablecoin: "0",
+    bitcoin: "0",
   });
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const { address, isConnected } = useAccount();
   const {
@@ -20,7 +20,7 @@ const TokenMinter = () => {
     getTokenBalance,
     initializeContracts,
     contracts,
-    isOnCorrectChain
+    isOnCorrectChain,
   } = useSmartContracts();
 
   // Load balances on component mount and when address changes
@@ -40,18 +40,18 @@ const TokenMinter = () => {
     setBalanceLoading(true);
     try {
       await initializeContracts();
-      
+
       const [stablecoinBalance, bitcoinBalance] = await Promise.all([
         getTokenBalance(contracts.STABLE_COIN, address),
-        getTokenBalance(contracts.BITCOIN_TOKEN, address)
+        getTokenBalance(contracts.BITCOIN_TOKEN, address),
       ]);
 
       setBalances({
         stablecoin: stablecoinBalance,
-        bitcoin: bitcoinBalance
+        bitcoin: bitcoinBalance,
       });
     } catch (err) {
-      console.error('Failed to load balances:', err);
+      console.error("Failed to load balances:", err);
     } finally {
       setBalanceLoading(false);
     }
@@ -59,31 +59,37 @@ const TokenMinter = () => {
 
   const handleMint = async () => {
     if (!isConnected) {
-      setError('Please connect your wallet first');
+      setError("Please connect your wallet first");
       return;
     }
 
     if (!mintAmount || parseFloat(mintAmount) <= 0) {
-      setError('Please enter a valid amount');
+      setError("Please enter a valid amount");
       return;
     }
 
     setLoading(true);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
 
     try {
-      await mintMockToken(selectedToken as 'stablecoin' | 'bitcoin', mintAmount);
-      setSuccess(`Successfully minted ${mintAmount} ${selectedToken === 'stablecoin' ? 'USDC' : 'BTC'} tokens!`);
-      
+      await mintMockToken(
+        selectedToken as "stablecoin" | "bitcoin",
+        mintAmount
+      );
+      setSuccess(
+        `Successfully minted ${mintAmount} ${
+          selectedToken === "stablecoin" ? "USDC" : "BTC"
+        } tokens!`
+      );
+
       // Reload balances after successful mint
       setTimeout(() => {
         loadBalances();
       }, 1000);
-      
     } catch (err: any) {
-      console.error('Minting failed:', err);
-      setError(err.message || 'Failed to mint tokens');
+      console.error("Minting failed:", err);
+      setError(err.message || "Failed to mint tokens");
     } finally {
       setLoading(false);
     }
@@ -91,15 +97,21 @@ const TokenMinter = () => {
 
   const formatBalance = (balance: string) => {
     const num = parseFloat(balance);
-    if (num === 0) return '0';
-    if (num < 0.0001) return '< 0.0001';
+    if (num === 0) return "0";
+    if (num < 0.0001) return "< 0.0001";
     return num.toLocaleString(undefined, { maximumFractionDigits: 4 });
   };
 
   if (!isConnected) {
     return (
       <div className="game-card bg-white">
-        <h3 className="font-bold text-xl mb-4" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>
+        <h3
+          className="font-bold text-xl mb-4"
+          style={{
+            color: "var(--charcoal)",
+            fontFamily: "'Press Start 2P', monospace",
+          }}
+        >
           MOCK TOKEN MINTER
         </h3>
         <p style={{ color: "var(--warm-red)" }}>
@@ -111,22 +123,48 @@ const TokenMinter = () => {
 
   return (
     <div className="space-y-4">
-      <h3 className="font-bold text-xl mb-4" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>
+      <h3
+        className="font-bold text-xl mb-4"
+        style={{
+          color: "var(--charcoal)",
+          fontFamily: "'Press Start 2P', monospace",
+        }}
+      >
         MOCK TOKEN MINTER
       </h3>
-      
+
       <div className="space-y-4">
         {/* Current Balances */}
         <div className="game-card bg-white">
-          <h4 className="font-bold mb-2" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>Your Balances:</h4>
+          <h4
+            className="font-bold mb-2"
+            style={{
+              color: "var(--charcoal)",
+              fontFamily: "'Press Start 2P', monospace",
+            }}
+          >
+            Your Balances:
+          </h4>
           <div className="grid grid-cols-2 gap-4 text-sm">
-            <div className="p-3 rounded" style={{ background: "var(--light-green)", color: "var(--charcoal)" }}>
+            <div
+              className="p-3 rounded"
+              style={{
+                background: "var(--light-green)",
+                color: "var(--charcoal)",
+              }}
+            >
               <span>USDC:</span>
               <span className="ml-2 font-bold">
                 {formatBalance(balances.stablecoin)}
               </span>
             </div>
-            <div className="p-3 rounded" style={{ background: "var(--sky-blue)", color: "var(--charcoal)" }}>
+            <div
+              className="p-3 rounded"
+              style={{
+                background: "var(--sky-blue)",
+                color: "var(--charcoal)",
+              }}
+            >
               <span>BTC:</span>
               <span className="ml-2 font-bold">
                 {formatBalance(balances.bitcoin)}
@@ -140,10 +178,16 @@ const TokenMinter = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Token Selection */}
             <div>
-              <label className="block font-bold mb-2" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>
+              <label
+                className="block font-bold mb-2"
+                style={{
+                  color: "var(--charcoal)",
+                  fontFamily: "'Press Start 2P', monospace",
+                }}
+              >
                 Select Token:
               </label>
-              <select 
+              <select
                 value={selectedToken}
                 onChange={(e) => setSelectedToken(e.target.value)}
                 className="pixel-input"
@@ -155,7 +199,13 @@ const TokenMinter = () => {
 
             {/* Amount Input */}
             <div>
-              <label className="block font-bold mb-2" style={{ color: "var(--charcoal)", fontFamily: "'Press Start 2P', monospace" }}>
+              <label
+                className="block font-bold mb-2"
+                style={{
+                  color: "var(--charcoal)",
+                  fontFamily: "'Press Start 2P', monospace",
+                }}
+              >
                 Amount to Mint:
               </label>
               <input
@@ -176,28 +226,46 @@ const TokenMinter = () => {
             disabled={loading || !mintAmount}
             className={`nintendo-button-primary w-full mt-4 disabled:opacity-50`}
           >
-            {loading ? 'MINTING...' : `MINT ${mintAmount} ${selectedToken === 'stablecoin' ? 'USDC' : 'BTC'}`}
+            {loading
+              ? "MINTING..."
+              : `MINT ${mintAmount} ${
+                  selectedToken === "stablecoin" ? "USDC" : "BTC"
+                }`}
           </button>
         </div>
 
         {/* Messages */}
         {error && (
-          <div className="bg-red-100 border-2 border-red-400 p-3 rounded" style={{ color: "var(--warm-red)" }}>
+          <div
+            className="bg-red-100 border-2 border-red-400 p-3 rounded"
+            style={{ color: "var(--warm-red)" }}
+          >
             {error}
           </div>
         )}
-        
+
         {success && (
-          <div className="bg-green-100 border-2 border-green-400 p-3 rounded" style={{ color: "var(--light-green)" }}>
+          <div
+            className="bg-green-100 border-2 border-green-400 p-3 rounded"
+            style={{ color: "var(--light-green)" }}
+          >
             {success}
           </div>
         )}
 
         {/* Instructions */}
-        <div className="p-3 rounded border-2" style={{ background: "var(--cream)", borderColor: "var(--border-gray)", color: "var(--charcoal)" }}>
-          <strong>Instructions:</strong> These are test tokens for the Citrea testnet. 
-          Mint USDC for collateral and premiums, mint BTC to create options contracts. 
-          You'll need both tokens to fully test the options trading functionality.
+        <div
+          className="p-3 rounded border-2"
+          style={{
+            background: "var(--cream)",
+            borderColor: "var(--border-gray)",
+            color: "var(--charcoal)",
+          }}
+        >
+          <strong>Instructions:</strong> These are test tokens for the Citrea
+          testnet. Mint USDC for collateral and premiums, mint BTC to create
+          options contracts. You'll need both tokens to fully test the options
+          trading functionality.
         </div>
       </div>
     </div>

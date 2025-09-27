@@ -1,6 +1,7 @@
 // Contract addresses on Citrea testnet - Updated with new deployment
 export const CONTRACT_ADDRESSES = {
-  LAYERED_OPTIONS_TRADING: "0xcd9948d810c4e8c2144c4e2fb84786502e6bedc8" as `0x${string}`,
+  LAYERED_OPTIONS_TRADING:
+    "0xcd9948d810c4e8c2144c4e2fb84786502e6bedc8" as `0x${string}`,
   BTC_PRICE_FEED: "0x2574b49a1ded38c9f239682769e3c3e708797c7a" as `0x${string}`,
   ETH_PRICE_FEED: "0x7d0c4127c937aaf59b0af8f686d63d602e27a777" as `0x${string}`,
   TIME_ORACLE: "0x12aece39b96768dc9a776b1b3176b2bc21063314" as `0x${string}`,
@@ -164,7 +165,7 @@ export const OptionType = {
   PUT: 1,
 } as const;
 
-export type OptionType = typeof OptionType[keyof typeof OptionType];
+export type OptionType = (typeof OptionType)[keyof typeof OptionType];
 
 // Type definitions
 export interface LayeredOption {

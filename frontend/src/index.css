@@ -3,7 +3,8 @@
 /* Retro Black & Off-White Game Style */
 
 /* Full screen layout support */
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   width: 100vw;
@@ -21,21 +22,21 @@ html, body {
 
 :root {
   /* Retro Game Color Palette - Black & Off-White */
-  --retro-black: #0a0a0a;        /* Deep black background */
-  --retro-dark-gray: #1a1a1a;    /* Dark surface */
-  --retro-gray: #2a2a2a;         /* Medium surface */
-  --retro-light-gray: #3a3a3a;   /* Light surface */
-  --retro-off-white: #f0f0f0;    /* Off-white text */
-  --retro-white: #ffffff;        /* Pure white accents */
-  --retro-green: #00ff00;        /* Retro green glow */
-  --retro-amber: #ffb000;        /* Amber glow */
-  --retro-red: #ff3030;          /* Error red */
-  --retro-border: #404040;       /* Subtle borders */
+  --retro-black: #0a0a0a; /* Deep black background */
+  --retro-dark-gray: #1a1a1a; /* Dark surface */
+  --retro-gray: #2a2a2a; /* Medium surface */
+  --retro-light-gray: #3a3a3a; /* Light surface */
+  --retro-off-white: #f0f0f0; /* Off-white text */
+  --retro-white: #ffffff; /* Pure white accents */
+  --retro-green: #00ff00; /* Retro green glow */
+  --retro-amber: #ffb000; /* Amber glow */
+  --retro-red: #ff3030; /* Error red */
+  --retro-border: #404040; /* Subtle borders */
   --retro-shadow: rgba(0, 0, 0, 0.8); /* Deep shadows */
   --retro-glow: rgba(0, 255, 0, 0.3); /* Green glow effect */
 
   /* Typography - Retro monospace */
-  font-family: 'Courier New', 'Monaco', 'Lucida Console', monospace;
+  font-family: "Courier New", "Monaco", "Lucida Console", monospace;
   line-height: 1.4;
   font-weight: 400;
   color-scheme: dark;
@@ -69,14 +70,22 @@ body {
   font-size: 14px;
   position: relative;
   /* Retro grid pattern background */
-  background-image: 
-    linear-gradient(90deg, var(--retro-dark-gray) 1px, transparent 1px),
+  background-image: linear-gradient(
+      90deg,
+      var(--retro-dark-gray) 1px,
+      transparent 1px
+    ),
     linear-gradient(180deg, var(--retro-dark-gray) 1px, transparent 1px);
   background-size: 20px 20px;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: 'Courier New', 'Monaco', 'Lucida Console', monospace;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "Courier New", "Monaco", "Lucida Console", monospace;
   line-height: 1.2;
   margin: 0 0 1rem 0;
   /* Retro glow effect */
@@ -101,14 +110,15 @@ h3 {
   color: var(--retro-amber);
 }
 
-p, span, div {
-  font-family: 'Courier New', 'Monaco', 'Lucida Console', monospace;
+p,
+span,
+div {
+  font-family: "Courier New", "Monaco", "Lucida Console", monospace;
   line-height: 1.6;
 }
 
 /* Retro Terminal Style UI Components */
 @layer components {
-  
   /* Retro Terminal Button Style */
   .retro-button {
     position: relative;
@@ -118,7 +128,7 @@ p, span, div {
     font-size: 0.875rem;
     cursor: pointer;
     transition: all 0.15s;
-    font-family: 'Courier New', monospace;
+    font-family: "Courier New", monospace;
     background: var(--retro-dark-gray);
     color: var(--retro-off-white);
     border: 1px solid var(--retro-border);
@@ -132,8 +142,7 @@ p, span, div {
   .retro-button:hover {
     background: var(--retro-gray);
     color: var(--retro-green);
-    box-shadow: 
-      inset 1px 1px 0px var(--retro-light-gray),
+    box-shadow: inset 1px 1px 0px var(--retro-light-gray),
       0 0 10px var(--retro-glow);
   }
 
@@ -151,7 +160,7 @@ p, span, div {
     font-size: 0.875rem;
     cursor: pointer;
     transition: all 0.15s;
-    font-family: 'Courier New', monospace;
+    font-family: "Courier New", monospace;
     background: var(--retro-black);
     color: var(--retro-green);
     border: 1px solid var(--retro-green);
@@ -183,7 +192,7 @@ p, span, div {
     font-size: 0.875rem;
     cursor: pointer;
     transition: all 0.15s;
-    font-family: 'Courier New', monospace;
+    font-family: "Courier New", monospace;
     background: var(--retro-black);
     color: var(--retro-amber);
     border: 1px solid var(--retro-amber);
@@ -227,9 +236,7 @@ p, span, div {
 
   .terminal-panel:hover {
     border-color: var(--retro-green);
-    box-shadow: 
-      inset 2px 2px 5px rgba(0, 0, 0, 0.5),
-      0 0 15px var(--retro-glow);
+    box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.5), 0 0 15px var(--retro-glow);
   }
 
   /* Terminal Window Style */
@@ -242,12 +249,12 @@ p, span, div {
   }
 
   .terminal-window::before {
-    content: '>';
+    content: ">";
     position: absolute;
     top: 10px;
     left: 10px;
     color: var(--retro-green);
-    font-family: 'Courier New', monospace;
+    font-family: "Courier New", monospace;
     font-size: 14px;
   }
 
@@ -257,7 +264,7 @@ p, span, div {
     color: var(--retro-off-white) !important;
     border: 1px solid var(--retro-border) !important;
     border-radius: 0 !important;
-    font-family: 'Courier New', monospace !important;
+    font-family: "Courier New", monospace !important;
     font-size: 14px !important;
     transition: all 0.2s;
   }
@@ -273,7 +280,7 @@ p, span, div {
   }
 
   .dialogue-box::after {
-    content: '';
+    content: "";
     position: absolute;
     top: -7px;
     left: 22px;
@@ -300,7 +307,7 @@ p, span, div {
     margin: 0 0.25rem;
     cursor: pointer;
     transition: all 0.15s;
-    font-family: 'Press Start 2P', monospace;
+    font-family: "Press Start 2P", monospace;
     font-size: 12px;
     color: var(--charcoal);
     background: var(--light-gray);
@@ -319,7 +326,7 @@ p, span, div {
     width: 100%;
     padding: 0.75rem 1rem;
     font-size: 0.875rem;
-    font-family: 'Press Start 2P', monospace;
+    font-family: "Press Start 2P", monospace;
     background: var(--white);
     border: 2px solid var(--charcoal);
     border-radius: 0;
@@ -341,18 +348,22 @@ p, span, div {
     border: 2px solid var(--charcoal);
     box-shadow: 4px 4px 0px var(--shadow);
     text-align: center;
-    background: linear-gradient(135deg, var(--light-green) 0%, var(--sky-blue) 100%);
+    background: linear-gradient(
+      135deg,
+      var(--light-green) 0%,
+      var(--sky-blue) 100%
+    );
   }
 
   .stat-number {
-    font-family: 'Press Start 2P', monospace;
+    font-family: "Press Start 2P", monospace;
     font-size: 24px;
     color: var(--charcoal);
     text-shadow: 2px 2px 0px var(--white);
   }
 
   .stat-label {
-    font-family: 'Inter', sans-serif;
+    font-family: "Inter", sans-serif;
     font-size: 14px;
     color: var(--charcoal);
     margin-top: 8px;
@@ -372,20 +383,28 @@ p, span, div {
 
   /* Hero Section Background */
   .hero-bg {
-    background: linear-gradient(180deg, var(--sky-blue) 0%, var(--light-green) 50%, var(--cream) 100%);
+    background: linear-gradient(
+      180deg,
+      var(--sky-blue) 0%,
+      var(--light-green) 50%,
+      var(--cream) 100%
+    );
     position: relative;
     overflow: hidden;
   }
 
   .hero-bg::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background-image: 
-      radial-gradient(circle at 20% 20%, var(--white) 2px, transparent 2px),
+    background-image: radial-gradient(
+        circle at 20% 20%,
+        var(--white) 2px,
+        transparent 2px
+      ),
       radial-gradient(circle at 80% 60%, var(--white) 1px, transparent 1px);
     background-size: 40px 40px, 60px 60px;
     opacity: 0.3;
@@ -406,7 +425,7 @@ p, span, div {
     padding: 0.5rem 1rem;
     background: var(--light-gray);
     border-bottom: 2px solid var(--charcoal);
-    font-family: 'Press Start 2P', monospace;
+    font-family: "Press Start 2P", monospace;
     font-size: 10px;
   }
 
@@ -430,19 +449,38 @@ p, span, div {
 
 /* Pixel-perfect animations */
 @keyframes pixelBounce {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-4px); }
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
 }
 
 @keyframes pixelShake {
-  0%, 100% { transform: translateX(0px); }
-  25% { transform: translateX(-2px); }
-  75% { transform: translateX(2px); }
+  0%,
+  100% {
+    transform: translateX(0px);
+  }
+  25% {
+    transform: translateX(-2px);
+  }
+  75% {
+    transform: translateX(2px);
+  }
 }
 
 @keyframes sparkle {
-  0%, 100% { opacity: 1; background-color: var(--light-green); }
-  50% { opacity: 0.7; background-color: var(--sky-blue); }
+  0%,
+  100% {
+    opacity: 1;
+    background-color: var(--light-green);
+  }
+  50% {
+    opacity: 0.7;
+    background-color: var(--sky-blue);
+  }
 }
 
 .animate-pixel-bounce {
@@ -462,26 +500,26 @@ p, span, div {
   body {
     font-size: 10px;
   }
-  
+
   h1 {
     font-size: 18px;
   }
-  
+
   h2 {
     font-size: 14px;
   }
-  
+
   .nintendo-button,
   .nintendo-button-primary {
     padding: 0.5rem 1rem;
     font-size: 0.75rem;
   }
-  
+
   .game-menu {
     flex-direction: column;
     gap: 0;
   }
-  
+
   .menu-item {
     padding: 0.75rem 1rem;
     border-right: none;
@@ -494,31 +532,31 @@ p, span, div {
   .text-retro-green {
     color: var(--retro-green) !important;
   }
-  
+
   .text-retro-amber {
     color: var(--retro-amber) !important;
   }
-  
+
   .text-retro-red {
     color: var(--retro-red) !important;
   }
-  
+
   .text-retro-off-white {
     color: var(--retro-off-white) !important;
   }
-  
+
   .bg-retro-black {
     background-color: var(--retro-black) !important;
   }
-  
+
   .border-retro-green {
     border-color: var(--retro-green) !important;
   }
-  
+
   .border-retro-amber {
     border-color: var(--retro-amber) !important;
   }
-  
+
   .border-retro-red {
     border-color: var(--retro-red) !important;
   }

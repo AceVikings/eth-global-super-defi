@@ -23,12 +23,20 @@ contract MockPriceFeed is Ownable {
 
     uint80 private currentRoundId;
     mapping(uint80 => RoundData) private rounds;
-    
+
     int256 private _latestAnswer;
     uint256 private _latestTimestamp;
 
-    event AnswerUpdated(int256 indexed current, uint256 indexed roundId, uint256 updatedAt);
-    event NewRound(uint256 indexed roundId, address indexed startedBy, uint256 startedAt);
+    event AnswerUpdated(
+        int256 indexed current,
+        uint256 indexed roundId,
+        uint256 updatedAt
+    );
+    event NewRound(
+        uint256 indexed roundId,
+        address indexed startedBy,
+        uint256 startedAt
+    );
 
     constructor(
         string memory _description,
@@ -41,7 +49,7 @@ contract MockPriceFeed is Ownable {
         currentRoundId = 1;
         _latestAnswer = _initialAnswer;
         _latestTimestamp = block.timestamp;
-        
+
         // Initialize the first round
         rounds[currentRoundId] = RoundData({
             roundId: currentRoundId,
@@ -60,7 +68,7 @@ contract MockPriceFeed is Ownable {
         currentRoundId++;
         _latestAnswer = _price;
         _latestTimestamp = block.timestamp;
-        
+
         rounds[currentRoundId] = RoundData({
             roundId: currentRoundId,
             answer: _price,
@@ -68,7 +76,7 @@ contract MockPriceFeed is Ownable {
             updatedAt: block.timestamp,
             answeredInRound: currentRoundId
         });
-        
+
         emit NewRound(currentRoundId, msg.sender, block.timestamp);
         emit AnswerUpdated(_price, currentRoundId, block.timestamp);
     }
@@ -100,7 +108,9 @@ contract MockPriceFeed is Ownable {
     /**
      * @dev Get historical price data for a specific round
      */
-    function getRoundData(uint80 _roundId)
+    function getRoundData(
+        uint80 _roundId
+    )
         external
         view
         returns (
@@ -111,7 +121,10 @@ contract MockPriceFeed is Ownable {
             uint80 answeredInRound
         )
     {
-        require(_roundId <= currentRoundId && _roundId > 0, "Round not available");
+        require(
+            _roundId <= currentRoundId && _roundId > 0,
+            "Round not available"
+        );
         RoundData memory round = rounds[_roundId];
         return (
             round.roundId,
@@ -147,7 +160,10 @@ contract MockPriceFeed is Ownable {
      * @dev Get answer for a specific round (simplified)
      */
     function getAnswer(uint256 _roundId) external view returns (int256) {
-        require(_roundId <= currentRoundId && _roundId > 0, "Round not available");
+        require(
+            _roundId <= currentRoundId && _roundId > 0,
+            "Round not available"
+        );
         return rounds[uint80(_roundId)].answer;
     }
 
@@ -155,7 +171,10 @@ contract MockPriceFeed is Ownable {
      * @dev Get timestamp for a specific round
      */
     function getTimestamp(uint256 _roundId) external view returns (uint256) {
-        require(_roundId <= currentRoundId && _roundId > 0, "Round not available");
+        require(
+            _roundId <= currentRoundId && _roundId > 0,
+            "Round not available"
+        );
         return rounds[uint80(_roundId)].updatedAt;
     }
 
@@ -167,7 +186,7 @@ contract MockPriceFeed is Ownable {
             currentRoundId++;
             _latestAnswer = _prices[i];
             _latestTimestamp = block.timestamp;
-            
+
             rounds[currentRoundId] = RoundData({
                 roundId: currentRoundId,
                 answer: _prices[i],
@@ -175,7 +194,7 @@ contract MockPriceFeed is Ownable {
                 updatedAt: block.timestamp,
                 answeredInRound: currentRoundId
             });
-            
+
             emit NewRound(currentRoundId, msg.sender, block.timestamp);
             emit AnswerUpdated(_prices[i], currentRoundId, block.timestamp);
         }

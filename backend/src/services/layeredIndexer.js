@@ -1,25 +1,41 @@
-import { createPublicClient, http, parseAbiItem, formatUnits, getAddress } from 'viem';
-import cron from 'node-cron';
+import {
+  createPublicClient,
+  http,
+  parseAbiItem,
+  formatUnits,
+  getAddress,
+} from "viem";
+import cron from "node-cron";
 
 // Citrea testnet configuration
 const citreaTestnet = {
   id: 5115,
-  name: 'Citrea Testnet',
-  network: 'citrea',
-  nativeCurrency: { decimals: 18, name: 'cBTC', symbol: 'cBTC' },
-  rpcUrls: { default: { http: ['https://rpc.testnet.citrea.xyz'] } },
-  blockExplorers: { default: { name: 'Explorer', url: 'https://explorer.testnet.citrea.xyz' } },
+  name: "Citrea Testnet",
+  network: "citrea",
+  nativeCurrency: { decimals: 18, name: "cBTC", symbol: "cBTC" },
+  rpcUrls: { default: { http: ["https://rpc.testnet.citrea.xyz"] } },
+  blockExplorers: {
+    default: { name: "Explorer", url: "https://explorer.testnet.citrea.xyz" },
+  },
 };
 
 // Contract configuration - Updated for Citrea testnet deployment
-const LAYERED_OPTIONS_ADDRESS = '0xcd9948d810c4e8c2144c4e2fb84786502e6bedc8';
+const LAYERED_OPTIONS_ADDRESS = "0xcd9948d810c4e8c2144c4e2fb84786502e6bedc8";
 
 // Events to track
 const EVENTS = {
-  LayeredOptionCreated: parseAbiItem('event LayeredOptionCreated(uint256 indexed tokenId, address indexed creator, address indexed baseAsset, uint256 strikePrice, uint256 expiry, uint256 premium, uint256 parentTokenId, uint8 optionType, address premiumToken)'),
-  ChildOptionCreated: parseAbiItem('event ChildOptionCreated(uint256 indexed tokenId, uint256 indexed parentTokenId, address indexed creator, uint256 strikePrice, uint256 expiry, uint8 optionType)'),
-  OptionExercised: parseAbiItem('event OptionExercised(uint256 indexed tokenId, address indexed exerciser, uint256 payout, bool isExercised)'),
-  TransferSingle: parseAbiItem('event TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value)'),
+  LayeredOptionCreated: parseAbiItem(
+    "event LayeredOptionCreated(uint256 indexed tokenId, address indexed creator, address indexed baseAsset, uint256 strikePrice, uint256 expiry, uint256 premium, uint256 parentTokenId, uint8 optionType, address premiumToken)"
+  ),
+  ChildOptionCreated: parseAbiItem(
+    "event ChildOptionCreated(uint256 indexed tokenId, uint256 indexed parentTokenId, address indexed creator, uint256 strikePrice, uint256 expiry, uint8 optionType)"
+  ),
+  OptionExercised: parseAbiItem(
+    "event OptionExercised(uint256 indexed tokenId, address indexed exerciser, uint256 payout, bool isExercised)"
+  ),
+  TransferSingle: parseAbiItem(
+    "event TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value)"
+  ),
 };
 
 class LayeredOptionsIndexer {
@@ -28,36 +44,36 @@ class LayeredOptionsIndexer {
       chain: citreaTestnet,
       transport: http(),
     });
-    
+
     this.options = new Map(); // tokenId -> option data
     this.transactions = []; // transaction history
     this.balances = new Map(); // user address -> { tokenId -> balance }
     this.isIndexing = false;
     this.lastProcessedBlock = null;
-    
+
     this.init();
   }
 
   async init() {
-    console.log('🔍 Initializing Layered Options Indexer...');
+    console.log("🔍 Initializing Layered Options Indexer...");
     try {
       const latestBlock = await this.client.getBlockNumber();
       this.lastProcessedBlock = latestBlock - 1000n; // Start from 1000 blocks ago
       console.log(`📊 Starting indexing from block ${this.lastProcessedBlock}`);
       await this.indexPastEvents();
     } catch (error) {
-      console.error('Failed to initialize indexer:', error);
+      console.error("Failed to initialize indexer:", error);
     }
   }
 
   async indexPastEvents() {
     if (this.isIndexing) return;
-    
+
     this.isIndexing = true;
-    
+
     try {
       const currentBlock = await this.client.getBlockNumber();
-      
+
       // Index LayeredOptionCreated events
       const optionCreatedLogs = await this.client.getLogs({
         address: LAYERED_OPTIONS_ADDRESS,
@@ -66,7 +82,7 @@ class LayeredOptionsIndexer {
         toBlock: currentBlock,
       });
 
-      // Index ChildOptionCreated events  
+      // Index ChildOptionCreated events
       const childOptionCreatedLogs = await this.client.getLogs({
         address: LAYERED_OPTIONS_ADDRESS,
         event: EVENTS.ChildOptionCreated,
@@ -91,27 +107,41 @@ class LayeredOptionsIndexer {
       });
 
       // Process events
-      await this.processOptionCreatedEvents([...optionCreatedLogs, ...childOptionCreatedLogs]);
+      await this.processOptionCreatedEvents([
+        ...optionCreatedLogs,
+        ...childOptionCreatedLogs,
+      ]);
       await this.processOptionExercisedEvents(optionExercisedLogs);
       await this.processTransferEvents(transferLogs);
 
       this.lastProcessedBlock = currentBlock;
-      console.log(`✅ Indexed to block ${currentBlock}, found ${this.options.size} options`);
-      
+      console.log(
+        `✅ Indexed to block ${currentBlock}, found ${this.options.size} options`
+      );
     } catch (error) {
-      console.error('Error indexing events:', error);
+      console.error("Error indexing events:", error);
     }
-    
+
     this.isIndexing = false;
   }
 
   async processOptionCreatedEvents(logs) {
     for (const log of logs) {
       try {
-        const { tokenId, creator, baseAsset, strikePrice, expiry, premium, parentTokenId, optionType, premiumToken } = log.args;
-        
+        const {
+          tokenId,
+          creator,
+          baseAsset,
+          strikePrice,
+          expiry,
+          premium,
+          parentTokenId,
+          optionType,
+          premiumToken,
+        } = log.args;
+
         const block = await this.client.getBlock({ blockHash: log.blockHash });
-        
+
         const option = {
           tokenId: tokenId.toString(),
           creator: getAddress(creator),
@@ -123,7 +153,7 @@ class LayeredOptionsIndexer {
           optionType: optionType.toString(), // 0 = CALL, 1 = PUT
           premiumToken: premiumToken,
           isExercised: false,
-          isParent: parentTokenId.toString() === '0',
+          isParent: parentTokenId.toString() === "0",
           blockNumber: Number(log.blockNumber),
           blockHash: log.blockHash,
           transactionHash: log.transactionHash,
@@ -133,15 +163,20 @@ class LayeredOptionsIndexer {
           formattedPremium: formatUnits(premium, 18),
           expirationDate: new Date(Number(expiry) * 1000).toISOString(),
           isExpired: Number(expiry) * 1000 < Date.now(),
-          optionTypeText: optionType === 0 ? 'CALL' : 'PUT',
-          premiumTokenText: premiumToken === '0x0000000000000000000000000000000000000000' ? 'cBTC' : 'USDC',
+          optionTypeText: optionType === 0 ? "CALL" : "PUT",
+          premiumTokenText:
+            premiumToken === "0x0000000000000000000000000000000000000000"
+              ? "cBTC"
+              : "USDC",
         };
 
         this.options.set(tokenId.toString(), option);
-        
+
         // Add to transaction history
         this.transactions.push({
-          type: option.isParent ? 'LAYERED_OPTION_CREATED' : 'CHILD_OPTION_CREATED',
+          type: option.isParent
+            ? "LAYERED_OPTION_CREATED"
+            : "CHILD_OPTION_CREATED",
           tokenId: option.tokenId,
           creator: option.creator,
           parentTokenId: option.parentTokenId,
@@ -150,10 +185,13 @@ class LayeredOptionsIndexer {
           transactionHash: option.transactionHash,
         });
 
-        console.log(`📝 ${option.isParent ? 'Parent' : 'Child'} ${option.optionTypeText} option created: Token #${tokenId}`);
-        
+        console.log(
+          `📝 ${option.isParent ? "Parent" : "Child"} ${
+            option.optionTypeText
+          } option created: Token #${tokenId}`
+        );
       } catch (error) {
-        console.error('Error processing option created event:', error);
+        console.error("Error processing option created event:", error);
       }
     }
   }
@@ -162,7 +200,7 @@ class LayeredOptionsIndexer {
     for (const log of logs) {
       try {
         const { tokenId, exerciser, payout, isExercised } = log.args;
-        
+
         const option = this.options.get(tokenId.toString());
         if (option) {
           option.isExercised = isExercised;
@@ -172,10 +210,10 @@ class LayeredOptionsIndexer {
         }
 
         const block = await this.client.getBlock({ blockHash: log.blockHash });
-        
+
         // Add to transaction history
         this.transactions.push({
-          type: 'OPTION_EXERCISED',
+          type: "OPTION_EXERCISED",
           tokenId: tokenId.toString(),
           exerciser: getAddress(exerciser),
           payout: payout.toString(),
@@ -185,9 +223,8 @@ class LayeredOptionsIndexer {
         });
 
         console.log(`⚡ Option exercised: Token #${tokenId} by ${exerciser}`);
-        
       } catch (error) {
-        console.error('Error processing option exercised event:', error);
+        console.error("Error processing option exercised event:", error);
       }
     }
   }
@@ -196,22 +233,24 @@ class LayeredOptionsIndexer {
     for (const log of logs) {
       try {
         const { operator, from, to, id, value } = log.args;
-        
+
         // Skip mint/burn events (from/to zero address)
-        if (from === '0x0000000000000000000000000000000000000000' || 
-            to === '0x0000000000000000000000000000000000000000') {
+        if (
+          from === "0x0000000000000000000000000000000000000000" ||
+          to === "0x0000000000000000000000000000000000000000"
+        ) {
           continue;
         }
 
         const block = await this.client.getBlock({ blockHash: log.blockHash });
-        
+
         // Update balances
         this.updateBalance(getAddress(from), id.toString(), -Number(value));
         this.updateBalance(getAddress(to), id.toString(), Number(value));
-        
+
         // Add to transaction history
         this.transactions.push({
-          type: 'OPTION_TRANSFERRED',
+          type: "OPTION_TRANSFERRED",
           tokenId: id.toString(),
           from: getAddress(from),
           to: getAddress(to),
@@ -220,10 +259,11 @@ class LayeredOptionsIndexer {
           transactionHash: log.transactionHash,
         });
 
-        console.log(`📤 Option transferred: Token #${id} from ${from} to ${to}`);
-        
+        console.log(
+          `📤 Option transferred: Token #${id} from ${from} to ${to}`
+        );
       } catch (error) {
-        console.error('Error processing transfer event:', error);
+        console.error("Error processing transfer event:", error);
       }
     }
   }
@@ -232,11 +272,11 @@ class LayeredOptionsIndexer {
     if (!this.balances.has(userAddress)) {
       this.balances.set(userAddress, new Map());
     }
-    
+
     const userBalances = this.balances.get(userAddress);
     const currentBalance = userBalances.get(tokenId) || 0;
     const newBalance = Math.max(0, currentBalance + change);
-    
+
     if (newBalance > 0) {
       userBalances.set(tokenId, newBalance);
     } else {
@@ -246,13 +286,14 @@ class LayeredOptionsIndexer {
 
   // Public API methods
   getAllOptions() {
-    return Array.from(this.options.values())
-      .sort((a, b) => b.timestamp - a.timestamp);
+    return Array.from(this.options.values()).sort(
+      (a, b) => b.timestamp - a.timestamp
+    );
   }
 
   getAvailableOptions() {
     return Array.from(this.options.values())
-      .filter(option => !option.isExercised && !option.isExpired)
+      .filter((option) => !option.isExercised && !option.isExpired)
       .sort((a, b) => b.timestamp - a.timestamp);
   }
 
@@ -262,13 +303,15 @@ class LayeredOptionsIndexer {
 
   getParentOptions() {
     return Array.from(this.options.values())
-      .filter(option => option.isParent)
+      .filter((option) => option.isParent)
       .sort((a, b) => b.timestamp - a.timestamp);
   }
 
   getChildOptions(parentId) {
     return Array.from(this.options.values())
-      .filter(option => !option.isParent && option.parentId === parentId.toString())
+      .filter(
+        (option) => !option.isParent && option.parentId === parentId.toString()
+      )
       .sort((a, b) => b.timestamp - a.timestamp);
   }
 
@@ -288,7 +331,7 @@ class LayeredOptionsIndexer {
         }
       }
     }
-    
+
     return userOptions.sort((a, b) => b.timestamp - a.timestamp);
   }
 
@@ -302,31 +345,32 @@ class LayeredOptionsIndexer {
         balances[tokenId] = balance;
       }
     }
-    
+
     return balances;
   }
 
   getCapitalEfficiencyStats() {
     const allOptions = this.getAllOptions();
     const totalOptions = allOptions.length;
-    const parentOptions = allOptions.filter(o => o.isParent);
-    const childOptions = allOptions.filter(o => !o.isParent);
-    
+    const parentOptions = allOptions.filter((o) => o.isParent);
+    const childOptions = allOptions.filter((o) => !o.isParent);
+
     let totalTraditionalCollateral = 0;
     let totalLayeredCollateral = 0;
-    
+
     for (const option of allOptions) {
       if (option.isParent) {
         totalTraditionalCollateral += parseFloat(option.formattedStrike);
       }
       totalLayeredCollateral += parseFloat(option.formattedPremium);
     }
-    
+
     const savings = totalTraditionalCollateral - totalLayeredCollateral;
-    const savingsPercentage = totalTraditionalCollateral > 0 
-      ? ((savings / totalTraditionalCollateral) * 100).toFixed(2)
-      : '0';
-    
+    const savingsPercentage =
+      totalTraditionalCollateral > 0
+        ? ((savings / totalTraditionalCollateral) * 100).toFixed(2)
+        : "0";
+
     return {
       totalOptions,
       parentOptions: parentOptions.length,
@@ -341,14 +385,15 @@ class LayeredOptionsIndexer {
   getOptionHierarchy(parentId) {
     const parent = this.getOptionById(parentId);
     if (!parent || !parent.isParent) return null;
-    
+
     const children = this.getChildOptions(parentId);
-    
+
     return {
       parent,
       children,
       totalChildren: children.length,
-      activeChildren: children.filter(c => !c.isExercised && !c.isExpired).length,
+      activeChildren: children.filter((c) => !c.isExercised && !c.isExpired)
+        .length,
     };
   }
 
@@ -360,18 +405,18 @@ class LayeredOptionsIndexer {
 
   // Start the indexing service
   start() {
-    console.log('🔄 Starting Layered Options indexing service...');
-    
+    console.log("🔄 Starting Layered Options indexing service...");
+
     // Index every 30 seconds
-    cron.schedule('*/30 * * * * *', async () => {
+    cron.schedule("*/30 * * * * *", async () => {
       await this.indexPastEvents();
     });
-    
-    console.log('✅ Layered Options indexer started');
+
+    console.log("✅ Layered Options indexer started");
   }
 
   stop() {
-    console.log('🛑 Stopping Layered Options indexer...');
+    console.log("🛑 Stopping Layered Options indexer...");
     // cron jobs are automatically cleaned up
   }
 }

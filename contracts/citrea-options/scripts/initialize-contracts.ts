@@ -12,7 +12,9 @@ async function initializeContracts() {
   const publicClient = await viem.getPublicClient();
 
   console.log(`📋 Deployer address: ${deployer.account.address}`);
-  const balance = await publicClient.getBalance({ address: deployer.account.address });
+  const balance = await publicClient.getBalance({
+    address: deployer.account.address,
+  });
   console.log(`💰 Deployer balance: ${formatEther(balance)} ETH`);
 
   // All deployed contract addresses
@@ -23,7 +25,8 @@ async function initializeContracts() {
     timeOracle: "0x12aece39b96768dc9a776b1b3176b2bc21063314" as `0x${string}`,
     btcPriceFeed: "0x2574b49a1ded38c9f239682769e3c3e708797c7a" as `0x${string}`,
     ethPriceFeed: "0x7d0c4127c937aaf59b0af8f686d63d602e27a777" as `0x${string}`,
-    layeredOptions: "0xcd9948d810c4e8c2144c4e2fb84786502e6bedc8" as `0x${string}`
+    layeredOptions:
+      "0xcd9948d810c4e8c2144c4e2fb84786502e6bedc8" as `0x${string}`,
   };
 
   console.log(`\n📋 All Contract Addresses:
@@ -36,10 +39,13 @@ async function initializeContracts() {
 🎯 LayeredOptions: ${addresses.layeredOptions}`);
 
   // Get contract instance
-  const layeredOptions = await viem.getContractAt("CitreaLayeredOptionsTrading", addresses.layeredOptions);
+  const layeredOptions = await viem.getContractAt(
+    "CitreaLayeredOptionsTrading",
+    addresses.layeredOptions
+  );
 
   console.log("\n1️⃣ Adding supported assets...");
-  
+
   try {
     await layeredOptions.write.addSupportedAsset([addresses.wbtc]);
     console.log("✅ WBTC added as supported asset");
@@ -53,18 +59,24 @@ async function initializeContracts() {
   } catch (error) {
     console.log("⚠️ WETH already added or failed to add");
   }
-  
+
   console.log("\n2️⃣ Setting price feeds...");
-  
+
   try {
-    await layeredOptions.write.setPriceFeed([addresses.wbtc, addresses.btcPriceFeed]);
+    await layeredOptions.write.setPriceFeed([
+      addresses.wbtc,
+      addresses.btcPriceFeed,
+    ]);
     console.log("✅ BTC price feed configured");
   } catch (error) {
     console.log("⚠️ BTC price feed already set or failed to set");
   }
 
   try {
-    await layeredOptions.write.setPriceFeed([addresses.weth, addresses.ethPriceFeed]);
+    await layeredOptions.write.setPriceFeed([
+      addresses.weth,
+      addresses.ethPriceFeed,
+    ]);
     console.log("✅ ETH price feed configured");
   } catch (error) {
     console.log("⚠️ ETH price feed already set or failed to set");
@@ -72,23 +84,23 @@ async function initializeContracts() {
 
   // Save complete addresses
   console.log("\n3️⃣ Saving Final Contract Addresses...");
-  
+
   const finalAddresses = {
     network: "citrea",
     timestamp: new Date().toISOString(),
     deployer: deployer.account.address,
     contracts: addresses,
-    status: "fully_deployed_and_initialized"
+    status: "fully_deployed_and_initialized",
   };
 
   const outputDir = "./deployments";
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
   }
-  
+
   const outputFile = path.join(outputDir, "citrea-addresses.json");
   fs.writeFileSync(outputFile, JSON.stringify(finalAddresses, null, 2));
-  
+
   console.log(`✅ Final addresses saved to: ${outputFile}`);
 
   console.log(`\n🎉 ===== CITREA DEPLOYMENT COMPLETE! =====

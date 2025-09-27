@@ -11,7 +11,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract TimeOracle is Ownable {
     uint256 private timeOffset;
     bool private useRealTime;
-    
+
     event TimeOffsetUpdated(uint256 newOffset);
     event TimeSourceChanged(bool useRealTime);
 
@@ -88,16 +88,20 @@ contract TimeOracle is Ownable {
      * @dev Get the next 15th of the month from current time
      */
     function getNext15th() external view returns (uint256) {
-        uint256 currentTime = useRealTime ? block.timestamp : block.timestamp + timeOffset;
-        
+        uint256 currentTime = useRealTime
+            ? block.timestamp
+            : block.timestamp + timeOffset;
+
         // Calculate timestamp for 15th of current month (simplified - using 30-day months)
-        uint256 fifteenth = currentTime - (currentTime % 30 days) + (15 * 1 days);
-        
+        uint256 fifteenth = currentTime -
+            (currentTime % 30 days) +
+            (15 * 1 days);
+
         // If we've passed the 15th, move to next month
         if (currentTime > fifteenth) {
             fifteenth += 30 days;
         }
-        
+
         return fifteenth;
     }
 
@@ -105,16 +109,20 @@ contract TimeOracle is Ownable {
      * @dev Get the next 30th of the month from current time
      */
     function getNext30th() external view returns (uint256) {
-        uint256 currentTime = useRealTime ? block.timestamp : block.timestamp + timeOffset;
-        
+        uint256 currentTime = useRealTime
+            ? block.timestamp
+            : block.timestamp + timeOffset;
+
         // Calculate timestamp for 30th of current month (simplified)
-        uint256 thirtieth = currentTime - (currentTime % 30 days) + (30 * 1 days);
-        
+        uint256 thirtieth = currentTime -
+            (currentTime % 30 days) +
+            (30 * 1 days);
+
         // If we've passed the 30th, move to next month
         if (currentTime > thirtieth) {
             thirtieth += 30 days;
         }
-        
+
         return thirtieth;
     }
 
@@ -122,15 +130,21 @@ contract TimeOracle is Ownable {
      * @dev Check if current time is past a specific timestamp
      */
     function isExpired(uint256 _expiryTime) external view returns (bool) {
-        uint256 currentTime = useRealTime ? block.timestamp : block.timestamp + timeOffset;
+        uint256 currentTime = useRealTime
+            ? block.timestamp
+            : block.timestamp + timeOffset;
         return currentTime >= _expiryTime;
     }
 
     /**
      * @dev Get time until expiry
      */
-    function getTimeToExpiry(uint256 _expiryTime) external view returns (uint256) {
-        uint256 currentTime = useRealTime ? block.timestamp : block.timestamp + timeOffset;
+    function getTimeToExpiry(
+        uint256 _expiryTime
+    ) external view returns (uint256) {
+        uint256 currentTime = useRealTime
+            ? block.timestamp
+            : block.timestamp + timeOffset;
         if (currentTime >= _expiryTime) {
             return 0;
         }
@@ -140,7 +154,15 @@ contract TimeOracle is Ownable {
     /**
      * @dev Get current time configuration
      */
-    function getTimeConfig() external view returns (bool usingRealTime, uint256 offset, uint256 currentTime) {
-        return (useRealTime, timeOffset, useRealTime ? block.timestamp : block.timestamp + timeOffset);
+    function getTimeConfig()
+        external
+        view
+        returns (bool usingRealTime, uint256 offset, uint256 currentTime)
+    {
+        return (
+            useRealTime,
+            timeOffset,
+            useRealTime ? block.timestamp : block.timestamp + timeOffset
+        );
     }
 }

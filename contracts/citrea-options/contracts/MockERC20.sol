@@ -21,7 +21,7 @@ contract MockERC20 is ERC20, Ownable {
     ) ERC20(name, symbol) Ownable(owner) {
         _decimals = decimals_;
         if (initialSupply > 0) {
-            _mint(owner, initialSupply * 10**decimals_);
+            _mint(owner, initialSupply * 10 ** decimals_);
         }
     }
 
@@ -38,7 +38,7 @@ contract MockERC20 is ERC20, Ownable {
      * @param amount The amount of tokens to mint (in token units, not wei)
      */
     function mint(address to, uint256 amount) external onlyOwner {
-        _mint(to, amount * 10**_decimals);
+        _mint(to, amount * 10 ** _decimals);
     }
 
     /**
@@ -56,7 +56,7 @@ contract MockERC20 is ERC20, Ownable {
      * @param amount The amount of tokens to burn (in token units, not wei)
      */
     function burn(address from, uint256 amount) external onlyOwner {
-        _burn(from, amount * 10**_decimals);
+        _burn(from, amount * 10 ** _decimals);
     }
 
     /**
@@ -73,6 +73,6 @@ contract MockERC20 is ERC20, Ownable {
      * @param amount The amount of tokens to mint to the caller
      */
     function faucet(uint256 amount) external {
-        _mint(msg.sender, amount * 10**_decimals);
+        _mint(msg.sender, amount * 10 ** _decimals);
     }
 }

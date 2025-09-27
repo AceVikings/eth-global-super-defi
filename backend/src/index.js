@@ -1,11 +1,11 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import { optionsRouter } from './routes/options.js';
-import { contractsRouter } from './routes/contracts.js';
-import { layeredOptionsRouter } from './routes/layeredOptions.js';
-import { indexer } from './services/indexer.js';
-import { layeredIndexer } from './services/layeredIndexer.js';
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import { optionsRouter } from "./routes/options.js";
+import { contractsRouter } from "./routes/contracts.js";
+import { layeredOptionsRouter } from "./routes/layeredOptions.js";
+import { indexer } from "./services/indexer.js";
+import { layeredIndexer } from "./services/layeredIndexer.js";
 
 dotenv.config();
 
@@ -17,18 +17,18 @@ app.use(cors());
 app.use(express.json());
 
 // Health check
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
+app.get("/health", (req, res) => {
+  res.json({
+    status: "ok",
     timestamp: new Date().toISOString(),
-    service: 'Citrea Options Backend' 
+    service: "Citrea Options Backend",
   });
 });
 
 // Routes
-app.use('/api/options', optionsRouter);
-app.use('/api/contracts', contractsRouter);
-app.use('/api/layered-options', layeredOptionsRouter);
+app.use("/api/options", optionsRouter);
+app.use("/api/contracts", contractsRouter);
+app.use("/api/layered-options", layeredOptionsRouter);
 
 // Start indexers
 indexer.start();

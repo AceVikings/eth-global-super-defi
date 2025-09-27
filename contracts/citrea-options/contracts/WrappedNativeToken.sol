@@ -31,12 +31,12 @@ contract WrappedNativeToken is ERC20, ReentrancyGuard {
     function withdraw(uint256 amount) external nonReentrant {
         require(amount > 0, "Must withdraw positive amount");
         require(balanceOf(msg.sender) >= amount, "Insufficient balance");
-        
+
         _burn(msg.sender, amount);
-        
+
         (bool success, ) = msg.sender.call{value: amount}("");
         require(success, "Transfer failed");
-        
+
         emit Withdraw(msg.sender, amount);
     }
 

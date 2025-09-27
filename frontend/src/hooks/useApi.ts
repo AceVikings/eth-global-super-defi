@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import apiService from '../services/api';
+import { useState, useEffect, useCallback } from "react";
+import apiService from "../services/api";
 
 /**
  * Custom hook for managing API calls with loading states and error handling
@@ -11,12 +11,12 @@ export function useApi() {
   const makeRequest = useCallback(async (apiCall: () => Promise<any>) => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const result = await apiCall();
       return result;
     } catch (err: any) {
-      const errorMessage = err?.message || 'An error occurred';
+      const errorMessage = err?.message || "An error occurred";
       setError(errorMessage);
       throw err;
     } finally {
@@ -38,14 +38,14 @@ export function useOptions(filters = {}) {
   const refreshOptions = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await apiService.getOptions(filters);
       setOptions(response.data || []);
     } catch (err: any) {
-      const errorMessage = err?.message || 'Failed to fetch options';
+      const errorMessage = err?.message || "Failed to fetch options";
       setError(errorMessage);
-      console.error('Failed to fetch options:', err);
+      console.error("Failed to fetch options:", err);
     } finally {
       setLoading(false);
     }
@@ -66,33 +66,33 @@ export function useUserData(address: string) {
     options: [],
     balances: {},
     loading: true,
-    error: null
+    error: null,
   });
 
   const refreshUserData = useCallback(async () => {
     if (!address) return;
 
-    setUserData(prev => ({ ...prev, loading: true, error: null }));
-    
+    setUserData((prev) => ({ ...prev, loading: true, error: null }));
+
     try {
       const [optionsResponse, balancesResponse] = await Promise.all([
         apiService.getUserOptions(address),
-        apiService.getUserBalances(address)
+        apiService.getUserBalances(address),
       ]);
 
       setUserData({
         options: optionsResponse.data || [],
         balances: balancesResponse.data || {},
         loading: false,
-        error: null
+        error: null,
       });
     } catch (err: any) {
-      setUserData(prev => ({
+      setUserData((prev) => ({
         ...prev,
         loading: false,
-        error: err?.message || 'Failed to fetch user data'
+        error: err?.message || "Failed to fetch user data",
       }));
-      console.error('Failed to fetch user data:', err);
+      console.error("Failed to fetch user data:", err);
     }
   }, [address]);
 
@@ -114,14 +114,14 @@ export function useMarketData() {
   const refreshMarketData = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await apiService.getMarketData();
       setMarketData(response.data);
     } catch (err: any) {
-      const errorMessage = err?.message || 'Failed to fetch market data';
+      const errorMessage = err?.message || "Failed to fetch market data";
       setError(errorMessage);
-      console.error('Failed to fetch market data:', err);
+      console.error("Failed to fetch market data:", err);
     } finally {
       setLoading(false);
     }
@@ -129,7 +129,7 @@ export function useMarketData() {
 
   useEffect(() => {
     refreshMarketData();
-    
+
     // Refresh market data every 30 seconds
     const interval = setInterval(refreshMarketData, 30000);
     return () => clearInterval(interval);
@@ -151,19 +151,20 @@ export function useContracts() {
   useEffect(() => {
     const fetchContractData = async () => {
       try {
-        const [contractsResponse, abisResponse, networkResponse] = await Promise.all([
-          apiService.getContracts(),
-          apiService.getContractABIs(),
-          apiService.getNetworkConfig()
-        ]);
+        const [contractsResponse, abisResponse, networkResponse] =
+          await Promise.all([
+            apiService.getContracts(),
+            apiService.getContractABIs(),
+            apiService.getNetworkConfig(),
+          ]);
 
         setContracts(contractsResponse.data);
         setAbis(abisResponse.data);
         setNetwork(networkResponse.data);
       } catch (err: any) {
-        const errorMessage = err?.message || 'Failed to fetch contract data';
+        const errorMessage = err?.message || "Failed to fetch contract data";
         setError(errorMessage);
-        console.error('Failed to fetch contract data:', err);
+        console.error("Failed to fetch contract data:", err);
       } finally {
         setLoading(false);
       }
@@ -181,9 +182,12 @@ export function useContracts() {
 export function usePremiumCalculator() {
   const { makeRequest, loading, error } = useApi();
 
-  const calculatePremium = useCallback(async (optionParams: any) => {
-    return makeRequest(() => apiService.calculatePremium(optionParams));
-  }, [makeRequest]);
+  const calculatePremium = useCallback(
+    async (optionParams: any) => {
+      return makeRequest(() => apiService.calculatePremium(optionParams));
+    },
+    [makeRequest]
+  );
 
   return { calculatePremium, loading, error };
 }

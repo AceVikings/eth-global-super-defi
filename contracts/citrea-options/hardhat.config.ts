@@ -52,7 +52,7 @@ const config: HardhatUserConfig = {
       chainId: 5115,
       accounts: [configVariable("CITREA_PRIVATE_KEY")],
       gas: 8000000, // 8M gas limit (reduced)
-      gasPrice: 2000000000, // 2 gwei (increased from 1 gwei) 
+      gasPrice: 2000000000, // 2 gwei (increased from 1 gwei)
       timeout: 120000, // 2 minutes timeout
     },
   },

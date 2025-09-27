@@ -3,7 +3,7 @@
  * Handles communication with the backend Express.js server
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 interface RequestOptions {
   method?: string;
@@ -25,7 +25,7 @@ class ApiService {
     const url = `${this.baseUrl}${endpoint}`;
     const config: RequestInit = {
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...options.headers,
       },
       ...options,
@@ -33,7 +33,7 @@ class ApiService {
 
     try {
       const response = await fetch(url, config);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
@@ -47,7 +47,7 @@ class ApiService {
 
   // Health check
   async checkHealth() {
-    return this.request('/health');
+    return this.request("/health");
   }
 
   // ===== OPTIONS API =====
@@ -62,9 +62,9 @@ class ApiService {
         params.append(key, String(value));
       }
     });
-    
+
     const query = params.toString();
-    return this.request(`/api/options${query ? `?${query}` : ''}`);
+    return this.request(`/api/options${query ? `?${query}` : ""}`);
   }
 
   /**
@@ -85,8 +85,8 @@ class ApiService {
    * Calculate option premium based on parameters
    */
   async calculatePremium(params: any) {
-    return this.request('/api/options/calculate-premium', {
-      method: 'POST',
+    return this.request("/api/options/calculate-premium", {
+      method: "POST",
       body: JSON.stringify(params),
     });
   }
@@ -104,21 +104,21 @@ class ApiService {
    * Get contract addresses and configuration
    */
   async getContracts() {
-    return this.request('/api/contracts');
+    return this.request("/api/contracts");
   }
 
   /**
    * Get contract ABIs
    */
   async getContractABIs() {
-    return this.request('/api/contracts/abi');
+    return this.request("/api/contracts/abi");
   }
 
   /**
    * Get network configuration
    */
   async getNetworkConfig() {
-    return this.request('/api/contracts/network');
+    return this.request("/api/contracts/network");
   }
 
   // ===== MARKET DATA API =====
@@ -127,17 +127,17 @@ class ApiService {
    * Get market data for assets
    */
   async getMarketData() {
-    return this.request('/api/market-data');
+    return this.request("/api/market-data");
   }
 
   // ===== WEBSOCKET CONNECTION =====
-  
+
   /**
    * Connect to real-time updates (if websocket is implemented)
    */
   connectRealtime(_callbacks: Record<string, any> = {}) {
     // For future WebSocket implementation
-    console.log('Real-time connection not yet implemented');
+    console.log("Real-time connection not yet implemented");
   }
 }
 
@@ -158,17 +158,17 @@ export const {
   getContractABIs,
   getNetworkConfig,
   getMarketData,
-  connectRealtime
+  connectRealtime,
 } = apiService;
 
 // Export types for TypeScript users
 export const OptionStatus = {
   ACTIVE: 0,
   EXERCISED: 1,
-  EXPIRED: 2
+  EXPIRED: 2,
 };
 
 export const OptionType = {
   CALL: 0,
-  PUT: 1
+  PUT: 1,
 };

@@ -1,0 +1,450 @@
+High-level architecture
+
+Actors
+
+Maker: creates a futures limit order off-chain (signed EIP-712). Posts collateral to a FuturesVault on-chain (or uses permit/Permit2 to allow collateral movement).
+
+Taker (liquidator/market taker): submits a fill transaction to 1inch Limit Order settlement contract to execute the off-chain order on-chain; that settlement call will deliver tokens to a FuturesSettlement contract which enforces futures logic.
+
+Oracle: provides a mark price (e.g., Chainlink / TWAP) to compute PnL, margin, and funding. (You can use a TWAP or Chainlink aggregator).
+
+Relayer / Keeper: optional bots that monitor expiries, margin ratios and trigger liquidations.
+
+Contracts
+
+FuturesFactory — deploys/initializes new futures markets (per underlying pair). Stores market params: tickSize, fundingInterval, fundingRateParams, maintenanceMargin, initialMarginMultiplier, maxLeverage, oracle address.
+
+FuturesVault — holds collateral deposits and keeps per-position accounting.
+
+FuturesSettlement — the critical integration point invoked when 1inch executes a limit order. It receives the executed swap (via 1inch fill resolution) and performs settlement: calculate PnL, transfer settlement tokens, update margin and positions, handle funding payments, emit events.
+
+PositionManager — maintains positions, margin levels, open/close logic, liquidations.
+
+(Optional) LimitOrderAdapter — helper to craft the EIP-712 LimitOrder structure with an extension encoding futures metadata. 1inch Limit Order v4 supports extra fields/extensions so we embed futures-specific parameters (expiry, size, side, collateral token, market id) in the order’s extension field. 
+GitHub
++1
+
+Flow (maker → trade → settle)
+
+Maker deposits collateral (e.g., USDC) to FuturesVault and approves usage (Permit2 or ERC20 approve).
+
+Maker creates an off-chain signed LimitOrder (1inch schema) where:
+
+makerToken = collateral/settlement token (e.g., USDC),
+
+takerToken = underlying or inverse token (depending on design),
+
+makerAmount and takerAmount encode desired size & price, and
+
+extension (bytes) encodes: marketId, leverage, size (signed int for long/short), expiry, makerPositionId etc.
+
+Order is posted to takers or relayers.
+
+Taker calls 1inch Limit Order settlement fillOrder (on-chain). The settlement transfers tokens through 1inch router and finally calls our FuturesSettlement (we’ll show how to ensure this path).
+
+FuturesSettlement decodes extension and the executed amounts, calls PositionManager.updateOnFill(...) to open/close/update position, computes PnL using oracle price, checks margin, deducts funding, and either credits maker/taker collateral or triggers liquidation flows if needed.
+
+Key design decisions & data model
+
+Per-market: Each market (e.g., ETH/USDC perpetual) has config: tickSize, initialMarginPercent, maintenanceMarginPercent, maxLeverage, fundingRateWindow.
+
+Position struct
+
+struct Position {
+    address owner;
+    int256 size; // positive = long (base tokens), negative = short
+    uint256 entryNotional; // USDC value at entry
+    uint256 entryPrice; // price at open (price * 1e18)
+    uint256 margin; // collateral allocated
+    uint256 lastFundingTimestamp;
+}
+
+
+Futures order extension (bytes encoded):
+
+marketId (uint32)
+
+size (int128) — signed position base amount (can be relative or absolute)
+
+side (enum) — open/close/partial
+
+leverage (uint16)
+
+expiry (uint40)
+
+makerPositionId (optional) — for maker referencing existing pos
+
+We will embed this into 1inch LimitOrder extension field (1inch v4 supports extension bytes). 
+GitHub
++1
+
+Pricing / Mark Price:
+
+Use Chainlink or on-chain TWAP. Funding payments computed periodically: fundingRate = (indexPrice - spotPrice)/periodNormalized → payers determined by sign. Keep it simple: compute funding each fundingInterval based on percent difference between index and spot.
+
+Margin & Liquidation:
+
+initialMargin = notional / leverage.
+
+maintenanceMargin = initialMargin * maintenanceFactor (eg 0.5 of initial).
+
+Liquidation if margin + unrealizedPnL < maintenanceMargin.
+
+Liquidator can call liquidate(positionId); partial or full liquidation depending on shortfall; penalty paid to liquidator.
+
+Interaction with 1inch Limit Order Protocol
+
+1inch Limit Orders are signed off-chain (EIP-712). On fill, its settlement contract executes a swap, transferring tokens to a recipient.
+
+We set the recipient of the swap to be our FuturesSettlement contract (or use the 1inch maker/taker flows). If you can craft the order so the settlement's final tokens are delivered to FuturesSettlement, your contract receives the on-chain tokens and can perform settlement logic.
+
+Use 1inch SDK to sign LimitOrder and set extension bytes to encode futures metadata. 1inch SDK docs & repo show how to build and sign orders. 
+GitHub
++1
+
+Minimal Solidity implementation (core files)
+
+Below are concise, fully commented Solidity contracts. They’re intentionally compact for a hackathon — production should add extensive safety, gas optimizations and audited math.
+
+Files:
+
+FuturesFactory.sol
+
+FuturesMarket.sol (market + vault + positions combined for brevity)
+
+FuturesSettlement.sol (entry point for 1inch fill)
+
+PositionManager.sol (helper library inside market)
+
+I'll present FuturesMarket.sol + FuturesSettlement.sol and a scripts/example.js (JS signing + fill stub). Use Solidity ^0.8.20.
+
+FuturesMarket.sol (single-file market & vault + position manager)
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+/*
+  Simplified market contract that:
+  - accepts collateral deposits
+  - manages positions
+  - exposes settleOnFill(amountReceived, extension) to be called by FuturesSettlement
+  Note: For hackathon brevity we unify vault + positions in one contract.
+*/
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract FuturesMarket is Ownable {
+    // Market config
+    IERC20 public collateralToken;   // e.g., USDC
+    address public oracle;           // price oracle (must implement latestAnswer() or similar)
+    uint256 public initialMarginPercent; // e.g., 100 (means 100% => 1x)
+    uint256 public maintenanceMarginPercent; // e.g., 50 -> 50% of initial
+    uint256 public maxLeverage; // e.g., 10 (10x)
+    uint256 public nextPositionId;
+
+    struct Position {
+        address owner;
+        int256 size; // base asset quantity (signed)
+        uint256 notional; // in collateral units at entry
+        uint256 entryPrice; // price * 1e18
+        uint256 margin; // collateral allocated
+        uint256 lastFundingTs;
+    }
+
+    mapping(uint256 => Position) public positions;
+    mapping(address => uint256[]) public ownerPositions;
+    mapping(address => uint256) public collateralBalance; // user => collateral in USDC (raw units)
+
+    event CollateralDeposited(address indexed who, uint256 amount);
+    event CollateralWithdrawn(address indexed who, uint256 amount);
+    event PositionOpened(uint256 indexed posId, address indexed owner, int256 size, uint256 notional, uint256 margin);
+    event PositionClosed(uint256 indexed posId, address indexed owner, int256 size, uint256 pnl, uint256 marginRemained);
+    event Liquidated(uint256 indexed posId, address indexed liquidator, uint256 penalty);
+
+    constructor(IERC20 _collateral, address _oracle, uint256 _initMarginPct, uint256 _maintMarginPct, uint256 _maxLev) {
+        collateralToken = _collateral;
+        oracle = _oracle;
+        initialMarginPercent = _initMarginPct;
+        maintenanceMarginPercent = _maintMarginPct;
+        maxLeverage = _maxLev;
+        nextPositionId = 1;
+    }
+
+    // ----- Collateral -----
+    function depositCollateral(uint256 amount) external {
+        require(amount > 0, "zero");
+        collateralToken.transferFrom(msg.sender, address(this), amount);
+        collateralBalance[msg.sender] += amount;
+        emit CollateralDeposited(msg.sender, amount);
+    }
+
+    function withdrawCollateral(uint256 amount) external {
+        require(collateralBalance[msg.sender] >= amount, "insufficient");
+        // ensure withdrawal doesn't make positions undercollateralized
+        collateralBalance[msg.sender] -= amount;
+        collateralToken.transfer(msg.sender, amount);
+        emit CollateralWithdrawn(msg.sender, amount);
+    }
+
+    // ----- Internal helpers -----
+    function _getPrice() internal view returns (uint256) {
+        // Expected oracle returns price with 1e18 scaling, implement accordingly
+        (bool ok, bytes memory res) = oracle.staticcall(abi.encodeWithSignature("getPrice()"));
+        require(ok, "oracle fail");
+        uint256 price = abi.decode(res, (uint256));
+        return price;
+    }
+
+    function _unrealizedPnl(Position storage pos, uint256 currentPrice) internal view returns (int256) {
+        // PnL (signed) = size * (currentPrice - entryPrice)
+        // size is in base units * 1e18? For brevity assume consistent scaling
+        if (pos.size == 0) return 0;
+        // pos.notional = abs(size)*entryPrice
+        int256 priceDelta = int256(currentPrice) - int256(pos.entryPrice);
+        // NOTE: be careful with scaling; simplified here
+        return (pos.size * priceDelta) / int256(1e18);
+    }
+
+    // ----- Called by FuturesSettlement upon an executed 1inch fill -----
+    // extension: bytes encoding (marketId, sizeSigned, leverage, expiry, maker)
+    function settleOnFill(address maker, uint256 amountReceived, bytes calldata extension) external returns (uint256 posId) {
+        // NOTE: access control: in production, ensure only trusted caller (e.g., FuturesSettlement) can call.
+        // For the hackathon, we'll keep it open but you should set onlyOwner or trusted relayer.
+        (int256 sizeSigned, uint16 leverage) = abi.decode(extension, (int256, uint16));
+        // amountReceived is in collateral token units (e.g., USDC)
+        // compute notional = amountReceived * leverage
+        uint256 notional = amountReceived * uint256(leverage);
+        require(leverage <= maxLeverage, "lev too big");
+
+        // requirement: maker must have collateral deposited equal to initialMargin (notional / leverage = amountReceived)
+        require(collateralBalance[maker] >= amountReceived, "insufficient collateral on deposit");
+
+        // lock margin from maker balance
+        collateralBalance[maker] -= amountReceived;
+
+        // create position
+        posId = nextPositionId++;
+        uint256 price = _getPrice();
+
+        positions[posId] = Position({
+            owner: maker,
+            size: sizeSigned,
+            notional: notional,
+            entryPrice: price,
+            margin: amountReceived,
+            lastFundingTs: block.timestamp
+        });
+        ownerPositions[maker].push(posId);
+
+        emit PositionOpened(posId, maker, sizeSigned, notional, amountReceived);
+        return posId;
+    }
+
+    // Close position (simple immediate close using current price)
+    function closePosition(uint256 posId) external {
+        Position storage pos = positions[posId];
+        require(pos.owner == msg.sender, "not owner");
+        uint256 price = _getPrice();
+        int256 pnlSigned = _unrealizedPnl(pos, price);
+        uint256 marginRem = pos.margin;
+        // settle pnl: if pnl positive, credit owner; if negative, deduct from margin
+        if (pnlSigned > 0) {
+            uint256 pnl = uint256(pnlSigned);
+            collateralBalance[pos.owner] += pnl + marginRem;
+        } else {
+            uint256 loss = uint256(-pnlSigned);
+            if (loss >= marginRem) {
+                // wiped out; margin = 0
+                marginRem = 0;
+            } else {
+                collateralBalance[pos.owner] += (marginRem - loss);
+            }
+        }
+        emit PositionClosed(posId, pos.owner, pos.size, uint256(pnlSigned > 0 ? pnlSigned : -pnlSigned), marginRem);
+        delete positions[posId];
+    }
+
+    // Liquidation: anyone can call
+    function liquidate(uint256 posId) external {
+        Position storage pos = positions[posId];
+        require(pos.owner != address(0), "no pos");
+        uint256 price = _getPrice();
+        int256 pnlSigned = _unrealizedPnl(pos, price);
+        // safety: compute current equity = margin + pnl
+        int256 equity = int256(pos.margin) + pnlSigned;
+        uint256 maint = (pos.notional * maintenanceMarginPercent) / 100;
+        if (equity < int256(maint)) {
+            // liquidate full for simplicity: pay penalty to liquidator
+            uint256 penalty = (pos.margin * 5) / 100; // 5% penalty
+            uint256 remainder = 0;
+            if (pos.margin > penalty) remainder = pos.margin - penalty;
+            // reward liquidator
+            collateralToken.transfer(msg.sender, penalty);
+            // return remainder to owner if any (we keep remainder in contract)
+            if (remainder > 0) collateralBalance[pos.owner] += remainder;
+            emit Liquidated(posId, msg.sender, penalty);
+            delete positions[posId];
+        } else {
+            revert("not undercollateralized");
+        }
+    }
+}
+
+
+Notes:
+
+This is simplified: scaling & decimals, integer math, safety checks, oracle interface, reentrancy protection, access control, and funding payment logic must be added for production.
+
+settleOnFill is the method the FuturesSettlement contract will call once 1inch executes and transfers the collateral to our system (we design the flow so final recipient of 1inch swap is our FuturesSettlement, which forwards tokens to the FuturesMarket.settleOnFill()).
+
+FuturesSettlement.sol (adapter that 1inch calls / receives funds)
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "./FuturesMarket.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+/*
+  This contract is intended to be the endpoint/recipient for 1inch limit order fills.
+  After 1inch swap executes, the received collateral is in this contract; it forwards to
+  the correct FuturesMarket.settleOnFill(...) with decoded extension data.
+*/
+
+contract FuturesSettlement {
+    address public owner;
+    IERC20 public collateralToken;
+
+    event ReceivedFrom1Inch(address indexed from, uint256 amount, bytes extension, uint256 posId);
+
+    constructor(IERC20 _collateral) {
+        owner = msg.sender;
+        collateralToken = _collateral;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "owner only");
+        _;
+    }
+
+    // Called by anyone (1inch settlement), but keep precautions in production
+    // amountReceived is expected to be the tokens transferred already to this contract
+    function onFillAndSettle(address futuresMarketAddress, address maker, uint256 amountReceived, bytes calldata extension) external returns (uint256) {
+        // forward collateral to market vault (or directly call settleOnFill and transfer)
+        // Transfer collateral to market contract
+        collateralToken.transfer(futuresMarketAddress, amountReceived);
+
+        // call market to create/update position
+        FuturesMarket market = FuturesMarket(futuresMarketAddress);
+        uint256 posId = market.settleOnFill(maker, amountReceived, extension);
+
+        emit ReceivedFrom1Inch(msg.sender, amountReceived, extension, posId);
+        return posId;
+    }
+
+    // emergency withdraw by owner (not for production)
+    function rescue(IERC20 token, address to, uint256 amount) external onlyOwner {
+        token.transfer(to, amount);
+    }
+}
+
+
+Integration detail: When constructing the 1inch Limit Order, set the final recipient to be FuturesSettlement (or craft swaps so the output goes there). The extension used in the LimitOrder must match abi.encode(int256 sizeSigned, uint16 leverage) used by FuturesMarket.settleOnFill.
+
+Example: Creating + Signing a futures limit order (JS using 1inch SDK)
+
+This example uses @1inch/limit-order-sdk to construct a LimitOrder and sign it. We encode futures metadata in the extension bytes.
+
+Example scripts/makeOrder.js (Node)
+
+import { Wallet } from "ethers";
+import { LimitOrder, LimitOrderBuilder } from "@1inch/limit-order-sdk"; // pseudocode names
+import { keccak256, defaultAbiCoder } from "ethers/lib/utils";
+
+const PRIV = process.env.PRIVATE_KEY;
+const wallet = new Wallet(PRIV);
+
+// Example fields
+const maker = wallet.address;
+const makerToken = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eb48"; // USDC
+const takerToken = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"; // just example
+const makerAmount = "1000000"; // 1,000,000 USDC (6 decimals) -> represent as raw units
+const takerAmount = "2000000000000000000"; // price * 1e18
+
+// futures extension: sizeSigned (int256), leverage (uint16)
+const sizeSigned = "-500000000000000000"; // negative means short, base amount scaled 1e18
+const leverage = 5;
+const extension = defaultAbiCoder.encode(["int256","uint16"], [sizeSigned, leverage]);
+
+// Build Limit Order (v4 shape) - pseudo
+const order = {
+  makerToken,
+  takerToken,
+  makerAmount,
+  takerAmount,
+  maker,
+  allowedSender: "0x0000000000000000000000000000000000000000",
+  extension,
+  salt: Date.now(),
+  expiration: Math.floor(Date.now()/1000 + 3600) // 1 hour
+};
+
+// Use 1inch limit-order-sdk to sign EIP-712 typed data (implementation details in SDK)
+const signed = await LimitOrder.signLimitOrder(order, wallet.privateKey, chainId);
+console.log("signed:", signed);
+
+
+NOTE: Use the official 1inch SDK samples (see dev docs) to create and sign a LimitOrder and set extension to your encoded bytes. Example SDK docs: quickstart + limit-order-sdk. 
+GitHub
++1
+
+How the fill transaction happens (taker/relayer side)
+
+Relayer obtains signed limit order (maker’s signature) from orderbook.
+
+Relayer executes a fillOrder call on 1inch Limit Order Protocol contract, specifying the recipient as FuturesSettlement and passing taker parameters.
+
+1inch settlement performs swaps, final tokens arrive at FuturesSettlement.
+
+FuturesSettlement calls FuturesMarket.settleOnFill(maker, amount, extension) to finalize position creation.
+
+This allows futures logic to be entirely enforced on-chain while leveraging 1inch for flexible order matching & low-gas settlement. 
+1inch Developer Portal
++1
+
+Funding payments & periodic settlement
+
+Implement a function accrueFunding(uint256 posId) inside FuturesMarket to be called periodically.
+
+Funding formula (simple): funding = (indexPrice - spotPrice) * positionSize * fundingFactor.
+
+Store lastFundingTs in position and accumulate funding across intervals.
+
+When funding is due, deduct from margin and transfer to counterparty pool or settlement.
+
+Implementers should offload heavy index computations to oracles or keepers to avoid gas bloat.
+
+Liquidations & incentives
+
+Liquidation function (illustrated above) allows anyone to liquidate undercollateralized positions.
+
+Liquidator receives a portion of margin (penalty).
+
+Optionally implement partial liquidation: liquidate up to restore maintenance margin.
+
+Tests & local dev plan (Hardhat)
+
+Deploy a mock Oracle returning price (with getPrice()).
+
+Deploy FuturesMarket with mock USDC (ERC20).
+
+Deploy FuturesSettlement with USDC.
+
+Maker: mint USDC, approve FuturesMarket, deposit collateral.
+
+Maker: sign limit order using 1inch SDK with extension bytes (size & leverage).
+
+Taker: simulate 1inch fillOrder by calling FuturesSettlement.onFillAndSettle(futuresMarketAddress, maker, amountReceived, extension) — in testing you can directly call as if 1inch forwarded funds.
+
+Assert positions[posId] exists with correct size, notional, margin.
+
+Mock price changes and call liquidate to assert liquidation flow.

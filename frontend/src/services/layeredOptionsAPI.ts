@@ -1,4 +1,5 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 
 export interface LayeredOptionAPI {
   tokenId: string;
@@ -24,7 +25,11 @@ export interface LayeredOptionAPI {
 }
 
 export interface TransactionAPI {
-  type: 'OPTION_CREATED' | 'CHILD_OPTION_CREATED' | 'OPTION_EXERCISED' | 'OPTION_TRANSFERRED';
+  type:
+    | "OPTION_CREATED"
+    | "CHILD_OPTION_CREATED"
+    | "OPTION_EXERCISED"
+    | "OPTION_TRANSFERRED";
   tokenId: string;
   timestamp: number;
   transactionHash: string;
@@ -68,19 +73,19 @@ class LayeredOptionsAPI {
     }
     const data = await response.json();
     if (!data.success) {
-      throw new Error(data.error || 'API request failed');
+      throw new Error(data.error || "API request failed");
     }
     return data.data;
   }
 
   // Get all layered options
   async getAllOptions(): Promise<LayeredOptionAPI[]> {
-    return this.fetchAPI<LayeredOptionAPI[]>('/');
+    return this.fetchAPI<LayeredOptionAPI[]>("/");
   }
 
   // Get available options (not exercised, not expired)
   async getAvailableOptions(): Promise<LayeredOptionAPI[]> {
-    return this.fetchAPI<LayeredOptionAPI[]>('/available');
+    return this.fetchAPI<LayeredOptionAPI[]>("/available");
   }
 
   // Get specific option by token ID
@@ -90,7 +95,7 @@ class LayeredOptionsAPI {
 
   // Get parent options only
   async getParentOptions(): Promise<LayeredOptionAPI[]> {
-    return this.fetchAPI<LayeredOptionAPI[]>('/parents');
+    return this.fetchAPI<LayeredOptionAPI[]>("/parents");
   }
 
   // Get child options for a parent
@@ -105,12 +110,14 @@ class LayeredOptionsAPI {
 
   // Get user balances
   async getUserBalances(userAddress: string): Promise<Record<string, number>> {
-    return this.fetchAPI<Record<string, number>>(`/user/${userAddress}/balances`);
+    return this.fetchAPI<Record<string, number>>(
+      `/user/${userAddress}/balances`
+    );
   }
 
   // Get capital efficiency statistics
   async getCapitalEfficiencyStats(): Promise<CapitalEfficiencyStats> {
-    return this.fetchAPI<CapitalEfficiencyStats>('/stats/efficiency');
+    return this.fetchAPI<CapitalEfficiencyStats>("/stats/efficiency");
   }
 
   // Get option hierarchy (parent + children)
@@ -120,7 +127,9 @@ class LayeredOptionsAPI {
 
   // Get recent transactions
   async getRecentTransactions(limit = 50): Promise<TransactionAPI[]> {
-    return this.fetchAPI<TransactionAPI[]>(`/transactions/recent?limit=${limit}`);
+    return this.fetchAPI<TransactionAPI[]>(
+      `/transactions/recent?limit=${limit}`
+    );
   }
 }
 
@@ -128,7 +137,7 @@ class LayeredOptionsAPI {
 export const layeredOptionsAPI = new LayeredOptionsAPI();
 
 // React hooks for using the API
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 export function useLayeredOptionsAPI() {
   const [options, setOptions] = useState<LayeredOptionAPI[]>([]);
@@ -142,8 +151,8 @@ export function useLayeredOptionsAPI() {
       const data = await layeredOptionsAPI.getAllOptions();
       setOptions(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch options');
-      console.error('Error fetching options:', err);
+      setError(err instanceof Error ? err.message : "Failed to fetch options");
+      console.error("Error fetching options:", err);
     } finally {
       setLoading(false);
     }
@@ -168,15 +177,17 @@ export function useUserLayeredOptions(userAddress?: string) {
 
   const fetchUserOptions = async () => {
     if (!userAddress) return;
-    
+
     try {
       setLoading(true);
       setError(null);
       const data = await layeredOptionsAPI.getUserOptions(userAddress);
       setUserOptions(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch user options');
-      console.error('Error fetching user options:', err);
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch user options"
+      );
+      console.error("Error fetching user options:", err);
     } finally {
       setLoading(false);
     }
@@ -206,8 +217,8 @@ export function useCapitalEfficiencyStats() {
       const data = await layeredOptionsAPI.getCapitalEfficiencyStats();
       setStats(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch stats');
-      console.error('Error fetching stats:', err);
+      setError(err instanceof Error ? err.message : "Failed to fetch stats");
+      console.error("Error fetching stats:", err);
     } finally {
       setLoading(false);
     }

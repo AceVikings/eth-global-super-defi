@@ -109,12 +109,12 @@ async function main() {
   try {
     for (const [name] of Object.entries(contracts)) {
       let artifactPath = `./artifacts/contracts/${name}.sol/${name}.json`;
-      
+
       // Special handling for layered options contract
-      if (name === 'CitreaLayeredOptionsTrading') {
+      if (name === "CitreaLayeredOptionsTrading") {
         artifactPath = `./artifacts/contracts/CitreaLayeredOptionsTrading.sol/${name}.json`;
       }
-      
+
       if (fs.existsSync(artifactPath)) {
         const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
         contracts[name as keyof typeof contracts].abi = artifact.abi;
@@ -373,7 +373,9 @@ async function main() {
   }
 
   // 8. Deploy CitreaLayeredOptionsTrading (Layered Contract)
-  console.log("\n8️⃣  Deploying CitreaLayeredOptionsTrading (Layered Contract)...");
+  console.log(
+    "\n8️⃣  Deploying CitreaLayeredOptionsTrading (Layered Contract)..."
+  );
   try {
     const layeredOptionsTradingHash = await walletClient.deployContract({
       abi: contracts.CitreaLayeredOptionsTrading.abi,
@@ -385,13 +387,15 @@ async function main() {
     console.log(`   Transaction: ${layeredOptionsTradingHash}`);
     console.log("   Waiting for confirmation...");
 
-    const layeredOptionsTradingReceipt = await publicClient.waitForTransactionReceipt({
-      hash: layeredOptionsTradingHash,
-      timeout: 120000, // 2 minutes for layered contract
-    });
+    const layeredOptionsTradingReceipt =
+      await publicClient.waitForTransactionReceipt({
+        hash: layeredOptionsTradingHash,
+        timeout: 120000, // 2 minutes for layered contract
+      });
 
     if (layeredOptionsTradingReceipt.contractAddress) {
-      deployedContracts.layeredOptionsTrading = layeredOptionsTradingReceipt.contractAddress;
+      deployedContracts.layeredOptionsTrading =
+        layeredOptionsTradingReceipt.contractAddress;
       console.log(
         `   ✅ CitreaLayeredOptionsTrading deployed: ${layeredOptionsTradingReceipt.contractAddress}`
       );
@@ -401,7 +405,10 @@ async function main() {
 
     await sleep(15000); // Wait 15 seconds for layered contract
   } catch (error) {
-    console.error("   ❌ CitreaLayeredOptionsTrading deployment failed:", error);
+    console.error(
+      "   ❌ CitreaLayeredOptionsTrading deployment failed:",
+      error
+    );
     throw error;
   }
 
@@ -432,7 +439,7 @@ async function main() {
   try {
     // Setup for original CitreaOptionsTrading contract
     console.log("   Setting up CitreaOptionsTrading...");
-    
+
     // Create a contract instance
     const optionsContract = {
       address: deployedContracts.optionsTrading as `0x${string}`,
@@ -447,7 +454,7 @@ async function main() {
         deployedContracts.bitcoinToken,
         deployedContracts.btcPriceFeed,
         2000n, // 20% volatility
-        500n   // 5% risk-free rate
+        500n, // 5% risk-free rate
       ],
       gasPrice: 1000000000n,
     });
@@ -467,7 +474,7 @@ async function main() {
 
     // Setup for CitreaLayeredOptionsTrading contract
     console.log("   Setting up CitreaLayeredOptionsTrading...");
-    
+
     const layeredOptionsContract = {
       address: deployedContracts.layeredOptionsTrading as `0x${string}`,
       abi: contracts.CitreaLayeredOptionsTrading.abi,
@@ -482,7 +489,6 @@ async function main() {
     });
 
     console.log("   ✅ CitreaLayeredOptionsTrading setup complete");
-
   } catch (error) {
     console.log("   ⚠️  Setup failed (contracts still deployed):", error);
   }
