@@ -43,14 +43,16 @@ Built on Citrea testnet, this protocol enables users to create, trade, and exerc
 ### Traditional Options vs. Layered Options
 
 #### **🔴 Traditional Options Trading**
+
 ```
 Writer has 1 BTC → Creates 1 Option → Locks 1 BTC as collateral
 Capital Utilization: 100% = 1 position per 1 BTC
 ```
 
 #### **🟢 Our Layered Protocol**
+
 ```
-Writer has 1 BTC → Creates Parent Option → Uses Parent as collateral for Child Option → 
+Writer has 1 BTC → Creates Parent Option → Uses Parent as collateral for Child Option →
 Uses Child as collateral for Grandchild Option
 
 Capital Utilization: 300%+ = Multiple positions from same underlying asset
@@ -58,12 +60,12 @@ Capital Utilization: 300%+ = Multiple positions from same underlying asset
 
 ### **Real Example: 3x Capital Multiplication**
 
-| Layer | Option Type | Strike Price | Premium Earned | Collateral Used |
-|-------|-------------|--------------|----------------|-----------------|
-| **Parent** | BTC Call | $100,000 | $5,000 | 1 BTC |
-| **Child** | BTC Call | $110,000 | $2,000 | Parent Option Token |
-| **Grandchild** | BTC Call | $120,000 | $800 | Child Option Token |
-| **TOTAL** | **3 Options** | **-** | **$7,800** | **1 BTC Input** |
+| Layer          | Option Type   | Strike Price | Premium Earned | Collateral Used     |
+| -------------- | ------------- | ------------ | -------------- | ------------------- |
+| **Parent**     | BTC Call      | $100,000     | $5,000         | 1 BTC               |
+| **Child**      | BTC Call      | $110,000     | $2,000         | Parent Option Token |
+| **Grandchild** | BTC Call      | $120,000     | $800           | Child Option Token  |
+| **TOTAL**      | **3 Options** | **-**        | **$7,800**     | **1 BTC Input**     |
 
 **Result: 280% increase in premium income from same collateral!**
 
@@ -83,7 +85,7 @@ graph TD
     F --> G[Uses Child NFT as Collateral]
     G --> H[Creates Grandchild Call Option]
     H --> I[3 Active Options from 1 BTC!]
-    
+
     style A fill:#ffeb3b
     style I fill:#4caf50
 ```
@@ -103,8 +105,9 @@ Where:
 ```
 
 **Example Calculation:**
+
 - BTC Price: $95,000
-- Strike: $100,000  
+- Strike: $100,000
 - Time to Expiry: 30 days
 - Volatility: 80%
 - **Calculated Premium: ~$3,200**
@@ -115,18 +118,19 @@ Where:
 
 ### **📍 Citrea Testnet Deployment**
 
-| Contract | Address | Purpose |
-|----------|---------|---------|
-| **🎯 LayeredOptionsTrading** | `0x5159326b4faf867eb45c324842e77543a8eae63d` | Core layered options logic |
-| **💱 OptionsTrading** | `0x1ab4a87d2afbd5647032b7acb9cbab225a9c42ba` | Basic options trading |
-| **🪙 StableCoin (USDC)** | `0x807fcda7a2d39f5cf52dc84a05477bb6857b7f80` | Premium payments |
-| **₿ Bitcoin Token** | `0x4dc54591faba530bf5fa3087b7ca50234b3dfe8a` | Underlying asset |
-| **🌊 WrappedNative** | `0xb9c28f1d335a7f0fcfd6c37268bc12cf97dd3202` | Wrapped cBTC |
-| **📊 BTC Price Feed** | `0xdefd3f543b9b815c3868747ccfb69b207fa52642` | Real-time BTC prices |
-| **📈 ETH Price Feed** | `0x8f643b663cbea913157f503a27294a7b430d7cfe` | Real-time ETH prices |
-| **⏰ Time Oracle** | `0xf634540dfe9a6337d82f1718576eca007d93c42d` | Time manipulation for demos |
+| Contract                     | Address                                      | Purpose                     |
+| ---------------------------- | -------------------------------------------- | --------------------------- |
+| **🎯 LayeredOptionsTrading** | `0x5159326b4faf867eb45c324842e77543a8eae63d` | Core layered options logic  |
+| **💱 OptionsTrading**        | `0x1ab4a87d2afbd5647032b7acb9cbab225a9c42ba` | Basic options trading       |
+| **🪙 StableCoin (USDC)**     | `0x807fcda7a2d39f5cf52dc84a05477bb6857b7f80` | Premium payments            |
+| **₿ Bitcoin Token**          | `0x4dc54591faba530bf5fa3087b7ca50234b3dfe8a` | Underlying asset            |
+| **🌊 WrappedNative**         | `0xb9c28f1d335a7f0fcfd6c37268bc12cf97dd3202` | Wrapped cBTC                |
+| **📊 BTC Price Feed**        | `0xdefd3f543b9b815c3868747ccfb69b207fa52642` | Real-time BTC prices        |
+| **📈 ETH Price Feed**        | `0x8f643b663cbea913157f503a27294a7b430d7cfe` | Real-time ETH prices        |
+| **⏰ Time Oracle**           | `0xf634540dfe9a6337d82f1718576eca007d93c42d` | Time manipulation for demos |
 
 ### **🌐 Network Configuration**
+
 - **Network**: Citrea Testnet
 - **Chain ID**: 5115
 - **RPC URL**: `https://rpc.testnet.citrea.xyz`
@@ -140,6 +144,7 @@ Where:
 ### **1. Traditional Collateral Locking**
 
 In traditional options:
+
 ```
 🔒 Collateral Locked = Strike Price × Contract Size (for puts)
 🔒 Collateral Locked = Current Price × Contract Size (for calls)
@@ -154,7 +159,7 @@ Example: 1 BTC call option at $100K strike
 
 ```
 Layer 1: 1 BTC → Parent Option ($100K strike) → $3K premium
-Layer 2: Parent Token → Child Option ($110K strike) → $1.5K premium  
+Layer 2: Parent Token → Child Option ($110K strike) → $1.5K premium
 Layer 3: Child Token → Grandchild Option ($120K strike) → $600 premium
 
 Total Premium from 1 BTC: $5.1K
@@ -165,11 +170,11 @@ Capital Efficiency: 5.4% (68% improvement!)
 
 Each layer has **built-in risk controls**:
 
-| Layer | Max Loss | Risk Mitigation |
-|-------|----------|-----------------|
-| Parent | Limited to BTC value | Fully collateralized |
-| Child | Limited to Parent ITM value | Contingent claim structure |
-| Grandchild | Limited to Child ITM value | Multi-layer protection |
+| Layer      | Max Loss                    | Risk Mitigation            |
+| ---------- | --------------------------- | -------------------------- |
+| Parent     | Limited to BTC value        | Fully collateralized       |
+| Child      | Limited to Parent ITM value | Contingent claim structure |
+| Grandchild | Limited to Child ITM value  | Multi-layer protection     |
 
 ---
 
@@ -178,29 +183,30 @@ Each layer has **built-in risk controls**:
 ### **Example 1: Bull Market Scenario**
 
 **Setup:**
+
 - BTC Price: $95,000
 - Create layered calls: $100K, $110K, $120K strikes
 - 30 days to expiry
 
 **Scenario: BTC rises to $125,000**
 
-| Layer | Strike | Profit/Loss | Status |
-|-------|--------|-------------|--------|
-| Parent | $100K | **+$25K** | ✅ Exercised |
-| Child | $110K | **+$15K** | ✅ Exercised |  
-| Grandchild | $120K | **+$5K** | ✅ Exercised |
-| **Total** | **-** | **+$45K** | **🚀 All ITM** |
+| Layer      | Strike | Profit/Loss | Status         |
+| ---------- | ------ | ----------- | -------------- |
+| Parent     | $100K  | **+$25K**   | ✅ Exercised   |
+| Child      | $110K  | **+$15K**   | ✅ Exercised   |
+| Grandchild | $120K  | **+$5K**    | ✅ Exercised   |
+| **Total**  | **-**  | **+$45K**   | **🚀 All ITM** |
 
 ### **Example 2: Sideways Market**
 
 **Scenario: BTC stays at $95,000**
 
-| Layer | Strike | Profit/Loss | Status |
-|-------|--------|-------------|--------|
-| Parent | $100K | Premium only | ⏰ Expires worthless |
-| Child | $110K | Premium only | ⏰ Expires worthless |
-| Grandchild | $120K | Premium only | ⏰ Expires worthless |
-| **Total** | **-** | **+$5.1K** | **💰 Keep all premiums** |
+| Layer      | Strike | Profit/Loss  | Status                   |
+| ---------- | ------ | ------------ | ------------------------ |
+| Parent     | $100K  | Premium only | ⏰ Expires worthless     |
+| Child      | $110K  | Premium only | ⏰ Expires worthless     |
+| Grandchild | $120K  | Premium only | ⏰ Expires worthless     |
+| **Total**  | **-**  | **+$5.1K**   | **💰 Keep all premiums** |
 
 ---
 
@@ -209,9 +215,10 @@ Each layer has **built-in risk controls**:
 ### **Core Contracts**
 
 #### **1. CitreaLayeredOptionsTrading.sol**
+
 ```solidity
 contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
-    
+
     struct LayeredOption {
         address baseAsset;           // BTC, ETH, etc.
         uint256 strikePrice;         // Exercise price
@@ -222,7 +229,7 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
         address premiumToken;        // USDC for payments
         bool isExercised;           // Exercise status
     }
-    
+
     // Key functions
     function createLayeredOption(...) external returns (uint256)
     function createChildOption(uint256 parentId, ...) external returns (uint256)
@@ -242,11 +249,11 @@ function calculatePremium(
 ) public view returns (uint256) {
     uint256 currentPrice = getCurrentPrice(asset);
     uint256 volatility = getVolatility(asset);
-    
+
     // Black-Scholes components
     uint256 timeValue = sqrt(timeToExpiry) * volatility;
     uint256 intrinsicValue = calculateIntrinsicValue(currentPrice, strikePrice, optionType);
-    
+
     return intrinsicValue + timeValue;
 }
 ```
@@ -258,19 +265,24 @@ function calculatePremium(
 ### **Creating Your First Layered Option**
 
 #### **Step 1: Deploy Parent Option**
+
 ```javascript
 // Connect to LayeredOptionsTrading contract
-const layeredOptions = new ethers.Contract(LAYERED_OPTIONS_ADDRESS, ABI, signer);
+const layeredOptions = new ethers.Contract(
+  LAYERED_OPTIONS_ADDRESS,
+  ABI,
+  signer
+);
 
 // Create parent BTC call option
 const tx = await layeredOptions.createLayeredOption(
-    BTC_ADDRESS,                    // baseAsset
-    parseUnits("100000", 8),        // $100K strike (8 decimals for BTC)
-    Math.floor(Date.now()/1000) + (30 * 24 * 3600), // 30 days from now
-    parseUnits("3000", 6),          // $3K premium (6 decimals for USDC)
-    0,                              // parentTokenId (0 = root option)
-    0,                              // CALL option
-    USDC_ADDRESS                    // premiumToken
+  BTC_ADDRESS, // baseAsset
+  parseUnits("100000", 8), // $100K strike (8 decimals for BTC)
+  Math.floor(Date.now() / 1000) + 30 * 24 * 3600, // 30 days from now
+  parseUnits("3000", 6), // $3K premium (6 decimals for USDC)
+  0, // parentTokenId (0 = root option)
+  0, // CALL option
+  USDC_ADDRESS // premiumToken
 );
 
 const receipt = await tx.wait();
@@ -278,13 +290,14 @@ const parentTokenId = receipt.logs[0].args.tokenId;
 ```
 
 #### **Step 2: Create Child Option**
+
 ```javascript
 // Use parent token as collateral for child option
 const childTx = await layeredOptions.createChildOption(
-    parentTokenId,                  // Parent token ID
-    parseUnits("110000", 8),        // $110K strike
-    Math.floor(Date.now()/1000) + (30 * 24 * 3600), // Same expiry
-    0                              // CALL option
+  parentTokenId, // Parent token ID
+  parseUnits("110000", 8), // $110K strike
+  Math.floor(Date.now() / 1000) + 30 * 24 * 3600, // Same expiry
+  0 // CALL option
 );
 
 const childReceipt = await childTx.wait();
@@ -292,13 +305,14 @@ const childTokenId = childReceipt.logs[0].args.tokenId;
 ```
 
 #### **Step 3: Create Grandchild Option**
+
 ```javascript
 // Stack another layer
 const grandchildTx = await layeredOptions.createChildOption(
-    childTokenId,                   // Child token ID as collateral
-    parseUnits("120000", 8),        // $120K strike  
-    Math.floor(Date.now()/1000) + (30 * 24 * 3600), // Same expiry
-    0                              // CALL option
+  childTokenId, // Child token ID as collateral
+  parseUnits("120000", 8), // $120K strike
+  Math.floor(Date.now() / 1000) + 30 * 24 * 3600, // Same expiry
+  0 // CALL option
 );
 ```
 
@@ -315,8 +329,8 @@ const userOptions = await layeredOptions.getUserOptions(userAddress);
 // Calculate total exposure
 let totalExposure = 0;
 for (const option of userOptions) {
-    const details = await layeredOptions.options(option.tokenId);
-    totalExposure += details.premium;
+  const details = await layeredOptions.options(option.tokenId);
+  totalExposure += details.premium;
 }
 
 // Monitor real-time P&L
@@ -341,13 +355,13 @@ const profitLoss = calculatePnL(userOptions, currentBTCPrice);
 ```solidity
 // Multiple protection layers
 contract CitreaLayeredOptionsTrading is ReentrancyGuard, Ownable {
-    
+
     modifier validOption(uint256 tokenId) {
         require(options[tokenId].expiry > getCurrentTime(), "Option expired");
         require(!options[tokenId].isExercised, "Already exercised");
         _;
     }
-    
+
     modifier sufficientCollateral(uint256 amount) {
         require(collateralBalance[msg.sender] >= amount, "Insufficient collateral");
         _;
@@ -357,20 +371,21 @@ contract CitreaLayeredOptionsTrading is ReentrancyGuard, Ownable {
 
 ### **Risk Mitigation Features**
 
-| Risk Type | Mitigation Strategy |
-|-----------|-------------------|
-| **Counterparty Risk** | Smart contract escrow, no counterparty needed |
-| **Price Oracle Risk** | Multiple price feeds, circuit breakers |
-| **Liquidity Risk** | Automated market making, diverse strike distribution |
-| **Smart Contract Risk** | Audited code, extensive testing, gradual rollout |
+| Risk Type               | Mitigation Strategy                                  |
+| ----------------------- | ---------------------------------------------------- |
+| **Counterparty Risk**   | Smart contract escrow, no counterparty needed        |
+| **Price Oracle Risk**   | Multiple price feeds, circuit breakers               |
+| **Liquidity Risk**      | Automated market making, diverse strike distribution |
+| **Smart Contract Risk** | Audited code, extensive testing, gradual rollout     |
 
 ---
 
 ## 🚀 Deployment Guide
 
 ### **Prerequisites**
+
 ```bash
-# Install dependencies  
+# Install dependencies
 npm install
 
 # Set up environment
@@ -380,6 +395,7 @@ echo "CITREA_PRIVATE_KEY=your_key_here" >> .env
 ```
 
 ### **Deploy Complete Protocol**
+
 ```bash
 # Deploy all contracts to Citrea testnet
 npx hardhat ignition deploy ./ignition/modules/CitreaOptions.ts --network citrea
@@ -392,6 +408,7 @@ npx hardhat run scripts/deploy-and-demo-testnet.ts --network citrea
 ```
 
 ### **Verify Deployment**
+
 ```bash
 # Check all contracts deployed successfully
 npx hardhat run scripts/verify-deployment.ts --network citrea
@@ -411,7 +428,7 @@ npx hardhat run scripts/test-layered-options.ts --network citrea
 npx tsx scripts/test-options-lifecycle.ts
 
 # Test layered option creation
-npx tsx scripts/test-layered-creation.ts  
+npx tsx scripts/test-layered-creation.ts
 
 # Test exercise scenarios
 npx tsx scripts/test-exercise-scenarios.ts
@@ -420,7 +437,7 @@ npx tsx scripts/test-exercise-scenarios.ts
 ### **Demo Scenarios Included**
 
 1. **📊 Basic Option Creation**: Simple call/put options
-2. **🎯 Layered Option Building**: Multi-layer option structures  
+2. **🎯 Layered Option Building**: Multi-layer option structures
 3. **💰 Premium Collection**: Realistic premium calculations
 4. **⚡ Exercise Simulation**: In-the-money exercise scenarios
 5. **🔄 Expiry Handling**: Automatic settlement at expiry
@@ -430,12 +447,14 @@ npx tsx scripts/test-exercise-scenarios.ts
 ## 📚 Additional Resources
 
 ### **Documentation**
+
 - **📖 [Protocol Whitepaper]**: Detailed technical specification
 - **🎓 [Developer Guide]**: Integration tutorials and examples
 - **📊 [API Reference]**: Complete contract interface documentation
 - **🔍 [Audit Reports]**: Security audit findings and fixes
 
 ### **Community**
+
 - **💬 [Discord]**: Developer discussions and support
 - **🐦 [Twitter]**: Protocol updates and announcements
 - **📝 [Blog]**: Deep dives into protocol mechanics
@@ -445,18 +464,21 @@ npx tsx scripts/test-exercise-scenarios.ts
 ## 🏆 Why Choose Layered Options?
 
 ### **For Traders**
+
 - **🚀 3x Capital Efficiency**: More positions from same capital
-- **💰 Higher Premium Income**: Multiple revenue streams  
+- **💰 Higher Premium Income**: Multiple revenue streams
 - **⚡ Flexible Strategies**: Mix and match option layers
 - **🎯 Risk Diversification**: Spread risk across strikes/expiries
 
 ### **For Developers**
+
 - **🔧 Composable Design**: Build on top of our primitives
 - **📊 Rich Analytics**: Comprehensive position tracking
 - **🛡️ Battle-tested Security**: Audited, production-ready code
 - **⚡ High Performance**: Optimized for gas efficiency
 
 ### **For Protocols**
+
 - **🎪 Integration Ready**: Standard ERC1155 interface
 - **🔌 Oracle Agnostic**: Works with any price feed
 - **🌊 Liquidity Bootstrapping**: Built-in market making
@@ -479,10 +501,12 @@ npx tsx scripts/test-exercise-scenarios.ts
 ### For Option Buyers
 
 1. **Setup Phase**
+
    - Mint test USDC tokens
    - Browse available options
 
 2. **Purchase Option**
+
    - Select desired option from marketplace
    - Approve USDC spending for premium
    - Purchase option with premium payment
@@ -496,21 +520,26 @@ npx tsx scripts/test-exercise-scenarios.ts
 ## 🛠️ Technical Details
 
 ### Option Types Supported
+
 - **Call Options**: Right to buy underlying asset at strike price
 - **Put Options**: Right to sell underlying asset at strike price
 
 ### Collateral Requirements
+
 - **Call Options**: Collateral = Contract Size × Current Price
 - **Put Options**: Collateral = Contract Size × Strike Price
 
 ### Premium Calculation
+
 Uses simplified Black-Scholes model considering:
+
 - Time to expiry
 - Volatility (20% default)
 - Risk-free rate (5% default)
 - Strike price vs current price
 
 ### Key Features
+
 - **American Style**: Options can be exercised anytime before expiry
 - **Automatic Settlement**: Smart contract handles exercise payouts
 - **Price Oracle Integration**: Real-time price feeds for accurate valuation
@@ -519,6 +548,7 @@ Uses simplified Black-Scholes model considering:
 ## 🚀 Deployment Guide
 
 ### Prerequisites
+
 - Node.js 18+
 - npm or yarn
 - Hardhat development environment
@@ -527,12 +557,14 @@ Uses simplified Black-Scholes model considering:
 ### Environment Setup
 
 1. **Clone and install dependencies**:
+
 ```bash
 cd contracts/citrea-options
 npm install
 ```
 
 2. **Configure environment**:
+
 ```bash
 cp .env.example .env
 # Add your private key to .env
@@ -540,11 +572,13 @@ PRIVATE_KEY=your_private_key_here
 ```
 
 3. **Deploy contracts**:
+
 ```bash
 npm run deploy:viem
 ```
 
 This will:
+
 - Deploy all 7 contracts to Citrea testnet
 - Initialize price feeds with BTC price
 - Set up market parameters
@@ -555,17 +589,21 @@ This will:
 The deployment script performs the following steps:
 
 1. **Deploy Token Contracts**
+
    - USDC mock token (6 decimals)
    - Bitcoin mock token (8 decimals)
 
 2. **Deploy Price Feeds**
+
    - BTC price feed (initialized at $97,000)
    - USDC price feed (initialized at $1.00)
 
 3. **Deploy Time Oracle**
+
    - Manages time for option expiry calculations
 
 4. **Deploy Options Trading Contract**
+
    - Main trading logic
    - Links to price feeds and time oracle
 
@@ -585,14 +623,15 @@ npx tsx scripts/test-options-lifecycle.ts
 ```
 
 This test validates:
+
 1. ✅ Contract deployment and initialization
-2. ✅ Token minting for test accounts  
+2. ✅ Token minting for test accounts
 3. ✅ Balance verification
 4. ✅ Market parameter setup
 5. ✅ Price feed integration
 6. ✅ Collateral calculation and approval
 7. ✅ Option creation (Call option, 20% OTM)
-8. ✅ Premium calculation and approval  
+8. ✅ Premium calculation and approval
 9. ✅ Option purchase by different account
 10. ✅ Final balance reconciliation
 
@@ -610,10 +649,10 @@ This test validates:
 
 ### Test Token Specifications
 
-| Token | Symbol | Decimals | Initial Supply | Purpose |
-|-------|--------|----------|---------------|----------|
-| USDC | USDC | 6 | Unlimited (mintable) | Collateral & Premium |
-| Bitcoin | BTC | 8 | Unlimited (mintable) | Underlying Asset |
+| Token   | Symbol | Decimals | Initial Supply       | Purpose              |
+| ------- | ------ | -------- | -------------------- | -------------------- |
+| USDC    | USDC   | 6        | Unlimited (mintable) | Collateral & Premium |
+| Bitcoin | BTC    | 8        | Unlimited (mintable) | Underlying Asset     |
 
 ### Example Trade Breakdown
 
@@ -739,22 +778,26 @@ MIT License - See LICENSE file for details
 **Last Updated**: September 27, 2025
 
 **Test Success Rate**: 100% (10/10 steps passing)
-   - Collateral management system
-   - Premium calculation using simplified Black-Scholes
-   - American-style exercise before expiry
-   - Support for multiple underlying assets and collaterals
+
+- Collateral management system
+- Premium calculation using simplified Black-Scholes
+- American-style exercise before expiry
+- Support for multiple underlying assets and collaterals
 
 2. **MockERC20.sol** - Testing token contract
+
    - Faucet functionality for easy testing
    - Configurable decimals and supply
    - Owner controls for minting/burning
 
 3. **WrappedNativeToken.sol** - Wrapped cBTC
+
    - 1:1 wrapping of native cBTC to ERC20
    - Deposit/withdraw functionality
    - Gas-efficient implementation
 
 4. **MockPriceFeed.sol** - Controllable price oracle
+
    - Chainlink-compatible interface
    - Owner-controlled price updates
    - Historical price data storage
@@ -777,16 +820,19 @@ npm install
 ### Deploy to Citrea Testnet
 
 1. Set up environment variables:
+
 ```bash
 export CITREA_PRIVATE_KEY="your_private_key_here"
 ```
 
 2. Deploy all contracts:
+
 ```bash
 npx hardhat ignition deploy ./ignition/modules/CitreaOptions.ts --network citrea
 ```
 
 3. Verify contracts (optional):
+
 ```bash
 npx hardhat verify --network citrea DEPLOYED_CONTRACT_ADDRESS
 ```
@@ -799,9 +845,9 @@ After deployment, set up the contracts:
 // Add BTC as supported underlying asset
 await optionsTrading.addSupportedAsset(
   bitcoinTokenAddress,
-  btcPriceFeedAddress, 
+  btcPriceFeedAddress,
   2000, // 20% volatility (basis points)
-  500   // 5% risk-free rate (basis points)
+  500 // 5% risk-free rate (basis points)
 );
 
 // Add USDC as collateral token
@@ -842,12 +888,14 @@ await optionsTrading.exerciseOption(optionId);
 ## 🎮 Demo Features
 
 ### Price Control
+
 ```typescript
-// Update BTC price to $105,000 
+// Update BTC price to $105,000
 await btcPriceFeed.updateAnswer(10500000000000);
 ```
 
 ### Time Manipulation
+
 ```typescript
 // Fast forward 1 day
 await timeOracle.fastForward(86400);
@@ -860,10 +908,11 @@ await timeOracle.useBlockTime();
 ```
 
 ### Token Faucets
+
 ```typescript
 // Get test tokens
 await stableCoin.faucet(10000); // 10,000 USDC
-await bitcoinToken.faucet(1);   // 1 BTC
+await bitcoinToken.faucet(1); // 1 BTC
 ```
 
 ## 🔍 Key Features
@@ -878,25 +927,27 @@ await bitcoinToken.faucet(1);   // 1 BTC
 
 ## 📋 Contract Addresses (After Deployment)
 
-| Contract | Address | Description |
-|----------|---------|-------------|
-| CitreaOptionsTrading | `TBD` | Main options trading contract |
-| TimeOracle | `TBD` | Time manipulation oracle |
-| MockERC20 (USDC) | `TBD` | Stable coin for collateral |
-| MockERC20 (BTC) | `TBD` | Bitcoin token for testing |
-| WrappedNativeToken | `TBD` | Wrapped cBTC |
-| MockPriceFeed (BTC/USD) | `TBD` | Bitcoin price feed |
-| MockPriceFeed (ETH/USD) | `TBD` | Ethereum price feed |
+| Contract                | Address | Description                   |
+| ----------------------- | ------- | ----------------------------- |
+| CitreaOptionsTrading    | `TBD`   | Main options trading contract |
+| TimeOracle              | `TBD`   | Time manipulation oracle      |
+| MockERC20 (USDC)        | `TBD`   | Stable coin for collateral    |
+| MockERC20 (BTC)         | `TBD`   | Bitcoin token for testing     |
+| WrappedNativeToken      | `TBD`   | Wrapped cBTC                  |
+| MockPriceFeed (BTC/USD) | `TBD`   | Bitcoin price feed            |
+| MockPriceFeed (ETH/USD) | `TBD`   | Ethereum price feed           |
 
 ## 🧪 Testing Scenarios
 
 1. **Basic Option Flow**:
+
    - Create call option at $100k strike
    - Purchase option paying premium
    - Update price to $110k
    - Exercise option for $10k profit
 
 2. **Time-based Expiry**:
+
    - Create option expiring in 1 day
    - Fast forward past expiry
    - Attempt exercise (should fail)
