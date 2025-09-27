@@ -37,6 +37,12 @@ export function HomePage({ onNavigate }: HomePageProps) {
             >
               Futures
             </div>
+            <div 
+              className="menu-item"
+              onClick={() => onNavigate('test')}
+            >
+              Test
+            </div>
           </div>
           
           <div className="flex items-center">
