@@ -98,13 +98,23 @@ async function main() {
       abi: [],
       bytecode: "0x",
     },
+    CitreaLayeredOptionsTrading: {
+      abi: [],
+      bytecode: "0x",
+    },
   };
 
   // Load contract artifacts
   console.log("📦 Loading contract artifacts...");
   try {
     for (const [name] of Object.entries(contracts)) {
-      const artifactPath = `./artifacts/contracts/${name}.sol/${name}.json`;
+      let artifactPath = `./artifacts/contracts/${name}.sol/${name}.json`;
+      
+      // Special handling for layered options contract
+      if (name === 'CitreaLayeredOptionsTrading') {
+        artifactPath = `./artifacts/contracts/CitreaLayeredOptionsTrading.sol/${name}.json`;
+      }
+      
       if (fs.existsSync(artifactPath)) {
         const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
         contracts[name as keyof typeof contracts].abi = artifact.abi;
@@ -362,6 +372,39 @@ async function main() {
     throw error;
   }
 
+  // 8. Deploy CitreaLayeredOptionsTrading (Layered Contract)
+  console.log("\n8️⃣  Deploying CitreaLayeredOptionsTrading (Layered Contract)...");
+  try {
+    const layeredOptionsTradingHash = await walletClient.deployContract({
+      abi: contracts.CitreaLayeredOptionsTrading.abi,
+      bytecode: contracts.CitreaLayeredOptionsTrading.bytecode as `0x${string}`,
+      args: [account.address],
+      gasPrice: 1000000000n, // 1 gwei
+    });
+
+    console.log(`   Transaction: ${layeredOptionsTradingHash}`);
+    console.log("   Waiting for confirmation...");
+
+    const layeredOptionsTradingReceipt = await publicClient.waitForTransactionReceipt({
+      hash: layeredOptionsTradingHash,
+      timeout: 120000, // 2 minutes for layered contract
+    });
+
+    if (layeredOptionsTradingReceipt.contractAddress) {
+      deployedContracts.layeredOptionsTrading = layeredOptionsTradingReceipt.contractAddress;
+      console.log(
+        `   ✅ CitreaLayeredOptionsTrading deployed: ${layeredOptionsTradingReceipt.contractAddress}`
+      );
+    } else {
+      throw new Error("Contract deployment failed - no contract address");
+    }
+
+    await sleep(15000); // Wait 15 seconds for layered contract
+  } catch (error) {
+    console.error("   ❌ CitreaLayeredOptionsTrading deployment failed:", error);
+    throw error;
+  }
+
   // Save deployment addresses
   const deploymentData = {
     network: "citrea",
@@ -386,8 +429,63 @@ async function main() {
 
   console.log("\n⚙️  Performing initial setup...");
 
-  // Initial setup would go here - add supported assets and collateral
-  // This will be implemented once contracts are successfully deployed
+  try {
+    // Setup for original CitreaOptionsTrading contract
+    console.log("   Setting up CitreaOptionsTrading...");
+    
+    // Create a contract instance
+    const optionsContract = {
+      address: deployedContracts.optionsTrading as `0x${string}`,
+      abi: contracts.CitreaOptionsTrading.abi,
+    };
+
+    // Add supported assets
+    await walletClient.writeContract({
+      ...optionsContract,
+      functionName: "addSupportedAsset",
+      args: [
+        deployedContracts.bitcoinToken,
+        deployedContracts.btcPriceFeed,
+        2000n, // 20% volatility
+        500n   // 5% risk-free rate
+      ],
+      gasPrice: 1000000000n,
+    });
+
+    await sleep(5000);
+
+    // Add supported collateral
+    await walletClient.writeContract({
+      ...optionsContract,
+      functionName: "addSupportedCollateral",
+      args: [deployedContracts.stableCoin],
+      gasPrice: 1000000000n,
+    });
+
+    console.log("   ✅ CitreaOptionsTrading setup complete");
+    await sleep(5000);
+
+    // Setup for CitreaLayeredOptionsTrading contract
+    console.log("   Setting up CitreaLayeredOptionsTrading...");
+    
+    const layeredOptionsContract = {
+      address: deployedContracts.layeredOptionsTrading as `0x${string}`,
+      abi: contracts.CitreaLayeredOptionsTrading.abi,
+    };
+
+    // Add supported assets to layered contract
+    await walletClient.writeContract({
+      ...layeredOptionsContract,
+      functionName: "addSupportedAsset",
+      args: [deployedContracts.bitcoinToken],
+      gasPrice: 1000000000n,
+    });
+
+    console.log("   ✅ CitreaLayeredOptionsTrading setup complete");
+
+  } catch (error) {
+    console.log("   ⚠️  Setup failed (contracts still deployed):", error);
+  }
 
   console.log("\n✅ Ready for frontend integration!");
 }
