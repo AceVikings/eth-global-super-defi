@@ -1,0 +1,363 @@
+@import "tailwindcss";
+
+/* Super DeFi Windows 95/MS Paint Style Design System */
+
+:root {
+  /* Windows 95 Color Palette */
+  --win95-gray: #c0c0c0;           /* Classic button gray */
+  --win95-dark-gray: #808080;      /* Button shadow */
+  --win95-light-gray: #dfdfdf;     /* Button highlight */
+  --win95-blue: #0080ff;           /* Classic Windows blue */
+  --win95-red: #ff0000;            /* Alert red */
+  --win95-yellow: #ffff00;         /* Warning yellow */
+  --win95-green: #00ff00;          /* Success green */
+  --win95-purple: #800080;         /* Classic purple */
+  --win95-cyan: #00ffff;           /* Bright cyan */
+  --win95-white: #ffffff;          /* Pure white */
+  --win95-black: #000000;          /* Pure black */
+  --win95-desktop: #008080;        /* Teal desktop color */
+
+  font-family: 'MS Sans Serif', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  line-height: 1.2;
+  font-weight: normal;
+  color-scheme: light;
+  color: var(--win95-black);
+  background-color: var(--win95-desktop);
+  font-synthesis: none;
+  text-rendering: optimizeSpeed;
+  -webkit-font-smoothing: auto;
+  -moz-osx-font-smoothing: auto;
+}
+
+a {
+  font-weight: normal;
+  color: var(--win95-blue);
+  text-decoration: underline;
+  cursor: pointer;
+}
+a:hover {
+  color: var(--win95-purple);
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--win95-desktop);
+  color: var(--win95-black);
+  font-size: 11px;
+  position: relative;
+}
+
+h1 {
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--win95-black);
+  margin: 8px 0;
+}
+
+h2 {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--win95-black);
+  margin: 6px 0;
+}
+
+h3 {
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--win95-black);
+  margin: 4px 0;
+}
+
+button {
+  background: var(--win95-gray);
+  border: 2px outset var(--win95-gray);
+  color: var(--win95-black);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  padding: 2px 8px;
+  margin: 1px;
+  min-height: 23px;
+  font-weight: normal;
+}
+
+button:hover {
+  background: var(--win95-light-gray);
+}
+
+button:active {
+  border: 2px inset var(--win95-gray);
+  background: var(--win95-dark-gray);
+}
+
+button:focus {
+  outline: 1px dotted var(--win95-black);
+  outline-offset: -4px;
+}
+
+/* Windows 95 Component Styles */
+@layer components {
+  .win95-window {
+    background: var(--win95-gray);
+    border: 2px outset var(--win95-gray);
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  }
+
+  .win95-titlebar {
+    background: linear-gradient(90deg, var(--win95-blue) 0%, var(--win95-purple) 100%);
+    color: white;
+    padding: 2px 4px;
+    font-weight: bold;
+    font-size: 11px;
+    border-bottom: 1px solid var(--win95-dark-gray);
+  }
+
+  .win95-button {
+    background: var(--win95-gray);
+    border: 2px outset var(--win95-gray);
+    color: var(--win95-black);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 11px;
+    padding: 4px 12px;
+    margin: 2px;
+    min-height: 23px;
+    font-weight: normal;
+    display: inline-block;
+    text-align: center;
+    text-decoration: none;
+  }
+
+  .win95-button:hover {
+    background: var(--win95-light-gray);
+  }
+
+  .win95-button:active {
+    border: 2px inset var(--win95-gray);
+    background: var(--win95-dark-gray);
+  }
+
+  .win95-button-primary {
+    background: var(--win95-blue);
+    color: white;
+    border: 2px outset var(--win95-blue);
+  }
+
+  .win95-button-primary:hover {
+    background: #4da6ff;
+  }
+
+  .win95-button-primary:active {
+    border: 2px inset var(--win95-blue);
+    background: #0066cc;
+  }
+
+  .win95-input {
+    background: white;
+    border: 2px inset var(--win95-gray);
+    color: var(--win95-black);
+    font-family: inherit;
+    font-size: 11px;
+    padding: 2px 4px;
+    margin: 1px;
+    min-height: 19px;
+  }
+
+  .win95-input:focus {
+    outline: none;
+    background: var(--win95-white);
+  }
+
+  .win95-panel {
+    background: var(--win95-gray);
+    border: 2px inset var(--win95-gray);
+    padding: 8px;
+    margin: 4px;
+  }
+
+  .win95-toolbar {
+    background: var(--win95-gray);
+    border-bottom: 1px solid var(--win95-dark-gray);
+    padding: 2px;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .win95-statusbar {
+    background: var(--win95-gray);
+    border-top: 1px solid var(--win95-dark-gray);
+    padding: 2px 8px;
+    font-size: 11px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+  }
+
+  .win95-menu {
+    background: var(--win95-gray);
+    border: 2px outset var(--win95-gray);
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    min-width: 120px;
+  }
+
+  .win95-menu-item {
+    padding: 4px 16px;
+    cursor: pointer;
+    font-size: 11px;
+    border: none;
+    background: transparent;
+    text-align: left;
+    width: 100%;
+  }
+
+  .win95-menu-item:hover {
+    background: var(--win95-blue);
+    color: white;
+  }
+
+  .win95-checkbox {
+    width: 13px;
+    height: 13px;
+    background: white;
+    border: 2px inset var(--win95-gray);
+    margin-right: 4px;
+    display: inline-block;
+    vertical-align: middle;
+    position: relative;
+    cursor: pointer;
+  }
+
+  .win95-checkbox.checked::after {
+    content: '✓';
+    position: absolute;
+    left: 1px;
+    top: -2px;
+    font-size: 10px;
+    color: var(--win95-black);
+  }
+
+  .win95-desktop-bg {
+    background: var(--win95-desktop);
+    min-height: 100vh;
+  }
+
+  .win95-taskbar {
+    background: var(--win95-gray);
+    border-top: 1px solid var(--win95-light-gray);
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    padding: 0 4px;
+    z-index: 1000;
+  }
+
+  .win95-start-button {
+    background: var(--win95-gray);
+    border: 2px outset var(--win95-gray);
+    color: var(--win95-black);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 2px 12px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .win95-start-button:hover {
+    background: var(--win95-light-gray);
+  }
+
+  .win95-start-button:active {
+    border: 2px inset var(--win95-gray);
+  }
+
+  .pixel-border {
+    border: 2px solid var(--win95-black);
+    background: var(--win95-white);
+  }
+
+  .paint-splash {
+    background: linear-gradient(45deg, 
+      var(--win95-red) 0%, 
+      var(--win95-yellow) 25%, 
+      var(--win95-green) 50%, 
+      var(--win95-cyan) 75%, 
+      var(--win95-blue) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: bold;
+  }
+
+  .ms-paint-title {
+    font-family: 'MS Sans Serif', sans-serif;
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--win95-black);
+    text-shadow: 1px 1px 0px var(--win95-light-gray);
+  }
+
+  .retro-icon {
+    width: 32px;
+    height: 32px;
+    background: var(--win95-gray);
+    border: 2px outset var(--win95-gray);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    margin: 2px;
+  }
+}
+
+/* System Modal/Dialog Styles */
+.win95-dialog {
+  background: var(--win95-gray);
+  border: 2px outset var(--win95-gray);
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
+  min-width: 300px;
+  max-width: 90vw;
+}
+
+.win95-dialog-content {
+  padding: 16px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.win95-dialog-buttons {
+  border-top: 1px solid var(--win95-dark-gray);
+  padding: 8px 16px;
+  text-align: right;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Pixel perfect rendering */
+* {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* Remove modern styling */
+* {
+  box-sizing: border-box;
+}
+
+/* Classic Windows 95 focus styles */
+:focus {
+  outline: 1px dotted var(--win95-black);
+  outline-offset: -2px;
+}
