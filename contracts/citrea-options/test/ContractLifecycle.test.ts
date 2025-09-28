@@ -42,20 +42,41 @@ describe("Contract Lifecycle End-to-End", function () {
     ]);
     console.log(`✅ WETH deployed at: ${weth.address}`);
 
+    // Deploy TimeOracle
+    const timeOracle = await viem.deployContract("TimeOracle", [owner.account.address]);
+    console.log(`✅ TimeOracle deployed at: ${timeOracle.address}`);
+
+    // Deploy price feeds for assets
+    const wbtcPriceFeed = await viem.deployContract("MockPriceFeed", [
+      "BTC/USD",
+      8, // 8 decimals for price
+      BigInt("4500000000000"), // $45,000 initial price (8 decimals)
+      owner.account.address,
+    ]);
+
+    const wethPriceFeed = await viem.deployContract("MockPriceFeed", [
+      "ETH/USD", 
+      8, // 8 decimals for price
+      BigInt("280000000000"), // $2,800 initial price (8 decimals) 
+      owner.account.address,
+    ]);
+    
+    console.log(`✅ Price feeds deployed: WBTC at ${wbtcPriceFeed.address}, WETH at ${wethPriceFeed.address}`);
+
     // Deploy LayeredOptions contract
     const layeredOptions = await viem.deployContract(
       "CitreaLayeredOptionsTrading",
-      [owner.account.address, stablecoin.address]
+      [owner.account.address, stablecoin.address, timeOracle.address]
     );
     console.log(`✅ LayeredOptions deployed at: ${layeredOptions.address}`);
 
     // ===== 2. SETUP PHASE =====
     console.log("\n⚙️ Phase 2: Contract Setup");
 
-    // Add supported assets
-    await layeredOptions.write.addSupportedAsset([wbtc.address]);
-    await layeredOptions.write.addSupportedAsset([weth.address]);
-    console.log(`✅ Added WBTC and WETH as supported assets`);
+    // Add supported assets with price feeds
+    await layeredOptions.write.addSupportedAsset([wbtc.address, wbtcPriceFeed.address]);
+    await layeredOptions.write.addSupportedAsset([weth.address, wethPriceFeed.address]); 
+    console.log(`✅ Added WBTC and WETH as supported assets with price feeds`);
 
     // Distribute tokens to traders
     const usdcAmount = BigInt("100000000000"); // 100k USDC (6 decimals)
@@ -81,13 +102,13 @@ describe("Contract Lifecycle End-to-End", function () {
     console.log(`✅ Distributed tokens and set approvals for 3 traders`);
 
     // ===== 3. PARENT OPTIONS CREATION PHASE =====
-    console.log("\n🎯 Phase 3: Parent Options Creation");
+    console.log("\n🎯 Phase 3: Parent Options Creation (Writers put up collateral)");
 
     const currentTime = BigInt(Math.floor(Date.now() / 1000));
     const expiry30Days = currentTime + 86400n * 30n;
     const expiry60Days = currentTime + 86400n * 60n;
 
-    // Create WBTC CALL option ($50,000 strike)
+    // Trader1 creates WBTC CALL option ($50,000 strike) - puts WBTC as collateral
     const btcCallStrike = BigInt("5000000000000"); // $50,000 (8 decimals)
     const btcCallPremium = BigInt("10000000"); // 0.1 WBTC premium (8 decimals)
 
@@ -99,16 +120,16 @@ describe("Contract Lifecycle End-to-End", function () {
         btcCallPremium,
         0n, // No parent
         0, // CALL option
-        wbtc.address, // Premium in WBTC
       ],
       { account: trader1.account }
     );
 
-    console.log(
-      `✅ Created WBTC CALL option (Token ID: 1) - Strike: $50,000, Premium: 0.1 WBTC`
-    );
+    console.log(`✅ Trader1 created WBTC CALL option (Token ID: 1)`);
+    console.log(`   - Strike: $50,000`);
+    console.log(`   - Premium: 0.1 WBTC (to be paid by buyer)`);
+    console.log(`   - Collateral: 1 WBTC (locked by trader1)`);
 
-    // Create WBTC PUT option ($40,000 strike)
+    // Trader2 creates WBTC PUT option ($40,000 strike) - puts WBTC as collateral
     const btcPutStrike = BigInt("4000000000000"); // $40,000 (8 decimals)
     const btcPutPremium = BigInt("5000000"); // 0.05 WBTC premium (8 decimals)
 
@@ -120,16 +141,16 @@ describe("Contract Lifecycle End-to-End", function () {
         btcPutPremium,
         0n, // No parent
         1, // PUT option
-        wbtc.address, // Premium in WBTC
       ],
       { account: trader2.account }
     );
 
-    console.log(
-      `✅ Created WBTC PUT option (Token ID: 2) - Strike: $40,000, Premium: 0.05 WBTC`
-    );
+    console.log(`✅ Trader2 created WBTC PUT option (Token ID: 2)`);
+    console.log(`   - Strike: $40,000`);
+    console.log(`   - Premium: 0.05 WBTC (to be paid by buyer)`);
+    console.log(`   - Collateral: ~0.89 WBTC (locked by trader2)`);
 
-    // Create WETH CALL option ($3,000 strike)
+    // Trader3 creates WETH CALL option ($3,000 strike) - puts WETH as collateral
     const ethCallStrike = BigInt("3000000000000000000000"); // $3,000 (18 decimals)
     const ethCallPremium = BigInt("100000000000000000"); // 0.1 WETH premium (18 decimals)
 
@@ -141,14 +162,26 @@ describe("Contract Lifecycle End-to-End", function () {
         ethCallPremium,
         0n, // No parent
         0, // CALL option
-        weth.address, // Premium in WETH
       ],
       { account: trader3.account }
     );
 
-    console.log(
-      `✅ Created WETH CALL option (Token ID: 3) - Strike: $3,000, Premium: 0.1 WETH`
-    );
+    console.log(`✅ Trader3 created WETH CALL option (Token ID: 3)`);
+    console.log(`   - Strike: $3,000`);
+    console.log(`   - Premium: 0.1 WETH (to be paid by buyer)`); 
+    console.log(`   - Collateral: 1 WETH (locked by trader3)`);
+
+    // ===== 4. OPTIONS PURCHASING PHASE =====
+    console.log("\n💰 Phase 4: Options Purchasing (Buyers pay premiums)");
+
+    // Now different traders can purchase these options by paying premiums
+    console.log("Note: In production, buyers would call purchaseOption() to pay premiums");
+    console.log("For now, options remain with their creators as this is creation demo");
+
+    console.log("\n📊 Summary of created options:");
+    console.log("1. WBTC CALL $50K - Writer: Trader1, Premium: 0.1 WBTC");
+    console.log("2. WBTC PUT $40K - Writer: Trader2, Premium: 0.05 WBTC"); 
+    console.log("3. WETH CALL $3K - Writer: Trader3, Premium: 0.1 WETH");
 
     // ===== 4. CHILD OPTIONS CREATION PHASE =====
     console.log("\n👶 Phase 4: Child Options Creation");
@@ -499,12 +532,20 @@ describe("Contract Lifecycle End-to-End", function () {
       BigInt("2100000000000000"),
       owner.account.address,
     ]);
+    const timeOracle = await viem.deployContract("TimeOracle", [owner.account.address]);
+    const wbtcPriceFeed = await viem.deployContract("MockPriceFeed", [
+      "BTC/USD",
+      8,
+      BigInt("4500000000000"),
+      owner.account.address,
+    ]);
+    
     const layeredOptions = await viem.deployContract(
       "CitreaLayeredOptionsTrading",
-      [owner.account.address, stablecoin.address]
+      [owner.account.address, stablecoin.address, timeOracle.address]
     );
 
-    await layeredOptions.write.addSupportedAsset([wbtc.address]);
+    await layeredOptions.write.addSupportedAsset([wbtc.address, wbtcPriceFeed.address]);
 
     // Setup tokens for traders
     const usdcAmount = BigInt("100000000000");

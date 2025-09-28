@@ -22,17 +22,26 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
     struct LayeredOption {
         address baseAsset;
         uint256 strikePrice;
-        uint256 expiry;
+        uint256 maturity; // Changed from expiry to maturity for European options
         uint256 premium;
         uint256 parentTokenId;
         OptionType optionType;
         address premiumToken; // Stablecoin for premium payments
-        bool isExercised;
+        bool isSettled; // Changed from isExercised to isSettled
+    }
+
+    // Settlement tracking
+    struct SettlementData {
+        uint256 maturityPrice; // Price locked at maturity
+        bool priceSet; // Whether maturity price has been set
+        uint256 totalPayout; // Total payout calculated for this option
     }
 
     // Core state variables
     mapping(uint256 => LayeredOption) public options;
+    mapping(uint256 => SettlementData) public settlements; // Track settlement data
     mapping(address => bool) public supportedAssets;
+    mapping(uint256 => address) public optionWriters; // Track who wrote each option
     address public stablecoin; // Stablecoin address for child option premiums
     uint256 private nextTokenId = 1;
 
@@ -52,11 +61,18 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
         address indexed creator,
         address indexed baseAsset,
         uint256 strikePrice,
-        uint256 expiry,
+        uint256 maturity, // Changed from expiry
         uint256 premium,
         uint256 parentTokenId,
         OptionType optionType,
         address premiumToken
+    );
+
+    event OptionPurchased(
+        uint256 indexed tokenId,
+        address indexed buyer,
+        address indexed writer,
+        uint256 premium
     );
 
     event ChildOptionCreated(
@@ -64,15 +80,22 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
         uint256 indexed parentTokenId,
         address indexed creator,
         uint256 strikePrice,
-        uint256 expiry,
+        uint256 maturity, // Changed from expiry
         OptionType optionType
     );
 
-    event OptionExercised(
+    event OptionSettled(
         uint256 indexed tokenId,
-        address indexed exerciser,
-        uint256 payout,
-        bool isExercised
+        address indexed holder,
+        uint256 maturityPrice,
+        uint256 payout
+    );
+
+    event MaturityPriceSet(
+        uint256 indexed tokenId,
+        address indexed asset,
+        uint256 maturityPrice,
+        uint256 maturityTime
     );
 
     constructor(
@@ -101,49 +124,47 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @dev Create a layered option token
+     * @dev Create a layered option token (writer only puts collateral, no premium payment)
      */
     function createLayeredOption(
         address baseAsset,
         uint256 strikePrice,
-        uint256 expiry,
+        uint256 maturity, // Changed from expiry
         uint256 premium,
         uint256 parentTokenId,
-        OptionType optionType,
-        address premiumToken
-    ) external payable nonReentrant returns (uint256) {
+        OptionType optionType
+    ) external nonReentrant returns (uint256) {
         require(supportedAssets[baseAsset], "Asset not supported");
-        require(expiry > getCurrentTime(), "Invalid expiry");
+        require(maturity > getCurrentTime(), "Invalid maturity");
+        require(premium > 0, "Premium must be greater than 0");
 
-        // Handle premium payment
-        if (premium > 0) {
-            if (premiumToken == address(0)) {
-                // ETH payment
-                require(msg.value >= premium, "Insufficient ETH premium");
-            } else {
-                // ERC20 token payment
-                require(
-                    IERC20(premiumToken).transferFrom(
-                        msg.sender,
-                        address(this),
-                        premium
-                    ),
-                    "Premium payment failed"
-                );
-            }
-        }
+        // Calculate required collateral for this option
+        uint256 collateralRequired = calculateCollateralRequired(baseAsset, strikePrice, optionType);
+        
+        // Writer must provide collateral in base asset (not premium)
+        require(
+            IERC20(baseAsset).transferFrom(
+                msg.sender,
+                address(this),
+                collateralRequired
+            ),
+            "Collateral transfer failed"
+        );
 
         uint256 tokenId = nextTokenId++;
+
+        // Track the option writer
+        optionWriters[tokenId] = msg.sender;
 
         options[tokenId] = LayeredOption({
             baseAsset: baseAsset,
             strikePrice: strikePrice,
-            expiry: expiry,
+            maturity: maturity, // Changed from expiry
             premium: premium,
             parentTokenId: parentTokenId,
             optionType: optionType,
-            premiumToken: premiumToken,
-            isExercised: false
+            premiumToken: stablecoin, // Always use stablecoin for premiums
+            isSettled: false // Changed from isExercised
         });
 
         _mint(msg.sender, tokenId, 1, "");
@@ -153,31 +174,183 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
             msg.sender,
             baseAsset,
             strikePrice,
-            expiry,
+            maturity, // Changed from expiry
             premium,
             parentTokenId,
             optionType,
-            premiumToken
+            stablecoin
         );
+
         return tokenId;
     }
 
     /**
-     * @dev Exercise a layered option
+     * @dev Purchase an option by paying premium to the writer
      */
-    function exerciseOption(uint256 tokenId) external nonReentrant {
+    function purchaseOption(uint256 tokenId) external nonReentrant {
+        require(options[tokenId].baseAsset != address(0), "Option does not exist");
+        require(balanceOf(msg.sender, tokenId) == 0, "Already own this option");
+        require(options[tokenId].maturity > getCurrentTime(), "Option matured"); // Changed from expired
+        require(!options[tokenId].isSettled, "Option already settled"); // Changed from isExercised
+
+        LayeredOption memory option = options[tokenId];
+        address writer = _getOptionWriter(tokenId);
+        require(writer != msg.sender, "Cannot buy your own option");
+
+        // Buyer pays premium in stablecoin to writer
+        require(
+            IERC20(stablecoin).transferFrom(
+                msg.sender,
+                writer,
+                option.premium
+            ),
+            "Premium payment failed"
+        );
+
+        // Transfer option token to buyer
+        _safeTransferFrom(writer, msg.sender, tokenId, 1, "");
+
+        emit OptionPurchased(tokenId, msg.sender, writer, option.premium);
+    }
+
+    /**
+     * @dev Get the writer (original creator) of an option
+     */
+    function _getOptionWriter(uint256 tokenId) internal view returns (address) {
+        return optionWriters[tokenId];
+    }
+
+    /**
+     * @dev Get current price of an asset from price feed
+     */
+    function getCurrentPrice(address asset) public view returns (uint256) {
+        require(address(priceFeeds[asset]) != address(0), "Price feed not set");
+        (, int256 answer, , , ) = priceFeeds[asset].latestRoundData();
+        require(answer > 0, "Invalid price");
+        return uint256(answer);
+    }
+
+    /**
+     * @dev Calculate required collateral for an option
+     */
+    function calculateCollateralRequired(
+        address baseAsset,
+        uint256 strikePrice,
+        OptionType optionType
+    ) public view returns (uint256) {
+        // For this implementation, require 100% collateral of strike price worth of base asset
+        uint256 currentPrice = getCurrentPrice(baseAsset);
+        
+        if (optionType == OptionType.CALL) {
+            // CALL options: need 1 unit of base asset as collateral
+            return 1 * (10 ** _getAssetDecimals(baseAsset));
+        } else {
+            // PUT options: need strike price worth of base asset
+            return (strikePrice * (10 ** _getAssetDecimals(baseAsset))) / currentPrice;
+        }
+    }
+
+    /**
+     * @dev Get asset decimals (simplified)
+     */
+    function _getAssetDecimals(address /*asset*/) internal pure returns (uint256) {
+        // Simplified - in production this should query the token contract
+        return 18; // Default to 18 decimals
+    }
+
+    /**
+     * @dev Add supported asset with price feed
+     */
+    function addSupportedAsset(address asset, address priceFeed) external onlyOwner {
+        require(asset != address(0), "Invalid asset address");
+        require(priceFeed != address(0), "Invalid price feed address");
+        
+        supportedAssets[asset] = true;
+        priceFeeds[asset] = MockPriceFeed(priceFeed);
+    }
+
+    /**
+     * @dev Settle a European option (can only be called at or after maturity)
+     */
+    function settleOption(uint256 tokenId) external nonReentrant {
         require(balanceOf(msg.sender, tokenId) > 0, "Not option holder");
         LayeredOption storage option = options[tokenId];
-        require(getCurrentTime() <= option.expiry, "Option expired");
-        require(!option.isExercised, "Option already exercised");
+        require(getCurrentTime() >= option.maturity, "Not yet matured");
+        require(!option.isSettled, "Option already settled");
+        
+        // Ensure maturity price is set
+        if (!settlements[tokenId].priceSet) {
+            _setMaturityPrice(tokenId);
+        }
 
-        // Mark as exercised
-        option.isExercised = true;
-
-        // Simple exercise logic - can be expanded
+        // Mark as settled
+        option.isSettled = true;
+        
+        uint256 payout = settlements[tokenId].totalPayout;
+        
+        // Burn the option token
         _burn(msg.sender, tokenId, 1);
 
-        emit OptionExercised(tokenId, msg.sender, 0, true); // payout=0 for now
+        // Transfer payout if any
+        if (payout > 0) {
+            require(
+                IERC20(option.baseAsset).transfer(msg.sender, payout),
+                "Payout transfer failed"
+            );
+        }
+
+        emit OptionSettled(tokenId, msg.sender, settlements[tokenId].maturityPrice, payout);
+    }
+
+    /**
+     * @dev Set maturity price for an asset (can only be called at or after maturity)
+     * This locks the price for all options of this asset maturing at this time
+     */
+    function setMaturityPrice(uint256 tokenId) external nonReentrant {
+        _setMaturityPrice(tokenId);
+    }
+
+    /**
+     * @dev Internal function to set maturity price
+     */
+    function _setMaturityPrice(uint256 tokenId) internal {
+        LayeredOption storage option = options[tokenId];
+        require(option.baseAsset != address(0), "Option does not exist");
+        require(getCurrentTime() >= option.maturity, "Not yet matured");
+        require(!settlements[tokenId].priceSet, "Price already set");
+
+        // Get current price from oracle
+        uint256 maturityPrice = getCurrentPrice(option.baseAsset);
+        
+        settlements[tokenId].maturityPrice = maturityPrice;
+        settlements[tokenId].priceSet = true;
+        
+        // Calculate payout based on option type and maturity price
+        uint256 payout = calculateOptionPayout(tokenId, maturityPrice);
+        settlements[tokenId].totalPayout = payout;
+
+        emit MaturityPriceSet(tokenId, option.baseAsset, maturityPrice, getCurrentTime());
+    }
+
+    /**
+     * @dev Calculate payout for an option based on maturity price
+     */
+    function calculateOptionPayout(uint256 tokenId, uint256 maturityPrice) public view returns (uint256) {
+        LayeredOption memory option = options[tokenId];
+        
+        if (option.optionType == OptionType.CALL) {
+            // Call option: payout if maturity price > strike price
+            if (maturityPrice > option.strikePrice) {
+                return maturityPrice - option.strikePrice;
+            }
+        } else {
+            // Put option: payout if strike price > maturity price  
+            if (option.strikePrice > maturityPrice) {
+                return option.strikePrice - maturityPrice;
+            }
+        }
+        
+        return 0; // Out of the money
     }
 
     /**
@@ -188,12 +361,12 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
     function createChildOption(
         uint256 parentTokenId,
         uint256 newStrikePrice,
-        uint256 newExpiry // 0 means use parent expiry
+        uint256 newMaturity // Changed from newExpiry
     ) external nonReentrant returns (uint256) {
         require(balanceOf(msg.sender, parentTokenId) > 0, "Not parent holder");
         LayeredOption memory parent = options[parentTokenId];
-        require(getCurrentTime() <= parent.expiry, "Parent expired");
-        require(!parent.isExercised, "Parent exercised");
+        require(getCurrentTime() <= parent.maturity, "Parent matured"); // Changed from expired
+        require(!parent.isSettled, "Parent settled"); // Changed from exercised
 
         // Validate strike price based on option type
         if (parent.optionType == OptionType.CALL) {
@@ -208,23 +381,23 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
             );
         }
 
-        // Handle expiry - default to parent expiry if 0
-        uint256 childExpiry = newExpiry == 0 ? parent.expiry : newExpiry;
+        // Handle maturity - default to parent maturity if 0
+        uint256 childMaturity = newMaturity == 0 ? parent.maturity : newMaturity;
         require(
-            childExpiry <= parent.expiry,
-            "Child expiry cannot exceed parent"
+            childMaturity <= parent.maturity,
+            "Child maturity cannot exceed parent"
         );
         require(
-            childExpiry > getCurrentTime(),
-            "Child expiry must be in future"
+            childMaturity > getCurrentTime(),
+            "Child maturity must be in future"
         );
 
         // Calculate premium based on strike differential and time remaining
         uint256 childPremium = _calculateChildPremium(
             parent.strikePrice,
             newStrikePrice,
-            parent.expiry,
-            childExpiry,
+            parent.maturity, // Changed from expiry
+            childMaturity, // Changed from expiry
             parent.optionType
         );
 
@@ -243,12 +416,12 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
         options[childTokenId] = LayeredOption({
             baseAsset: parent.baseAsset,
             strikePrice: newStrikePrice,
-            expiry: childExpiry,
+            maturity: childMaturity, // Changed from expiry
             premium: childPremium,
             parentTokenId: parentTokenId,
             optionType: parent.optionType, // Same type as parent
             premiumToken: stablecoin, // Always stablecoin for children
-            isExercised: false
+            isSettled: false // Changed from isExercised
         });
 
         _mint(msg.sender, childTokenId, 1, "");
@@ -258,7 +431,7 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
             parentTokenId,
             msg.sender,
             newStrikePrice,
-            childExpiry,
+            childMaturity, // Changed from expiry
             parent.optionType
         );
         return childTokenId;
@@ -270,8 +443,8 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
     function _calculateChildPremium(
         uint256 parentStrike,
         uint256 childStrike,
-        uint256 parentExpiry,
-        uint256 childExpiry,
+        uint256 parentMaturity, // Changed from parentExpiry
+        uint256 childMaturity, // Changed from childExpiry
         OptionType optionType
     ) internal view returns (uint256) {
         uint256 strikeDiff;
@@ -286,8 +459,8 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
         uint256 currentTime = getCurrentTime();
 
         // Time ratio: how much of the parent's time the child uses
-        uint256 timeRatio = ((childExpiry - currentTime) * BASIS_POINTS) /
-            (parentExpiry - currentTime);
+        uint256 timeRatio = ((childMaturity - currentTime) * BASIS_POINTS) / // Changed from childExpiry
+            (parentMaturity - currentTime); // Changed from parentExpiry
 
         // Premium = strike differential * time ratio * base rate
         // This gives a premium proportional to risk and time
@@ -306,15 +479,15 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
     function calculateChildPremium(
         uint256 parentTokenId,
         uint256 newStrikePrice,
-        uint256 newExpiry
+        uint256 newMaturity // Changed from newExpiry
     ) external view returns (uint256) {
         require(
             options[parentTokenId].baseAsset != address(0),
             "Parent option does not exist"
         );
         LayeredOption memory parent = options[parentTokenId];
-        require(!parent.isExercised, "Parent exercised");
-        require(getCurrentTime() <= parent.expiry, "Parent expired");
+        require(!parent.isSettled, "Parent settled"); // Changed from isExercised
+        require(getCurrentTime() <= parent.maturity, "Parent matured"); // Changed from expired
 
         // Validate strike price
         if (parent.optionType == OptionType.CALL) {
@@ -329,31 +502,24 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
             );
         }
 
-        uint256 childExpiry = newExpiry == 0 ? parent.expiry : newExpiry;
+        uint256 childMaturity = newMaturity == 0 ? parent.maturity : newMaturity; // Changed from expiry
         require(
-            childExpiry <= parent.expiry,
-            "Child expiry cannot exceed parent"
+            childMaturity <= parent.maturity,
+            "Child maturity cannot exceed parent" // Changed from expiry
         );
         require(
-            childExpiry > getCurrentTime(),
-            "Child expiry must be in future"
+            childMaturity > getCurrentTime(),
+            "Child maturity must be in future" // Changed from expiry
         );
 
         return
             _calculateChildPremium(
                 parent.strikePrice,
                 newStrikePrice,
-                parent.expiry,
-                childExpiry,
+                parent.maturity, // Changed from expiry
+                childMaturity, // Changed from expiry
                 parent.optionType
             );
-    }
-
-    /**
-     * @dev Add supported asset
-     */
-    function addSupportedAsset(address asset) external onlyOwner {
-        supportedAssets[asset] = true;
     }
 
     /**
@@ -371,7 +537,7 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
     function calculateParentPremium(
         address asset,
         uint256 strikePrice,
-        uint256 expiry,
+        uint256 maturity, // Changed from expiry
         OptionType optionType
     ) external view returns (uint256) {
         MockPriceFeed priceFeed = priceFeeds[asset];
@@ -381,18 +547,18 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
         );
 
         // Get current price from price feed
-        int256 price = priceFeed.latestAnswer();
-        require(price > 0, "Invalid price from feed");
-        uint256 currentPrice = uint256(price);
+        (, int256 answer, , , ) = priceFeed.latestRoundData();
+        require(answer > 0, "Invalid price from feed");
+        uint256 currentPrice = uint256(answer);
 
         // Get current time from time oracle
         uint256 currentTime = getCurrentTime();
 
-        // Time to expiry in seconds
-        uint256 timeToExpiry = expiry > currentTime ? expiry - currentTime : 0;
+        // Time to maturity in seconds
+        uint256 timeToMaturity = maturity > currentTime ? maturity - currentTime : 0;
 
         // Convert to fraction of year (approximately)
-        uint256 timeInYears = (timeToExpiry * BASIS_POINTS) / (365 * 24 * 3600);
+        uint256 timeInYears = (timeToMaturity * BASIS_POINTS) / (365 * 24 * 3600);
 
         // Calculate intrinsic value
         uint256 intrinsicValue = 0;
@@ -434,10 +600,10 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @dev Check if option is expired
+     * @dev Check if option has matured (European style)
      */
-    function isOptionExpired(uint256 tokenId) external view returns (bool) {
-        return getCurrentTime() > options[tokenId].expiry;
+    function isOptionMatured(uint256 tokenId) external view returns (bool) {
+        return getCurrentTime() >= options[tokenId].maturity;
     }
 
     /**

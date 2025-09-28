@@ -158,7 +158,7 @@ contract CitreaOptionsTrading is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @dev Create a new option (writer side)
+     * @dev Create a new option (writer side - only puts collateral, no premium payment)
      */
     function createOption(
         OptionType optionType,
@@ -166,7 +166,8 @@ contract CitreaOptionsTrading is Ownable, ReentrancyGuard {
         uint256 expiryTimestamp,
         address underlyingAsset,
         address collateralToken,
-        uint256 contractSize
+        uint256 contractSize,
+        uint256 premium
     )
         external
         nonReentrant
@@ -181,6 +182,7 @@ contract CitreaOptionsTrading is Ownable, ReentrancyGuard {
         );
         require(strikePrice > 0, "Invalid strike price");
         require(contractSize > 0, "Invalid contract size");
+        require(premium > 0, "Premium must be greater than 0");
 
         uint256 timeToExpiry = expiryTimestamp - timeOracle.getCurrentTime();
         require(
@@ -197,16 +199,7 @@ contract CitreaOptionsTrading is Ownable, ReentrancyGuard {
             contractSize
         );
 
-        // Calculate premium using Black-Scholes approximation
-        uint256 premium = calculatePremium(
-            optionType,
-            strikePrice,
-            expiryTimestamp,
-            underlyingAsset,
-            contractSize
-        );
-
-        // Lock collateral
+        // Lock collateral from writer (not premium)
         IERC20(collateralToken).safeTransferFrom(
             msg.sender,
             address(this),

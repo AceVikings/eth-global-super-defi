@@ -1,8 +1,8 @@
-# 🎯 Citrea Layered Options Protocol
+# 🎯 Citrea European-Style Layered Options Protocol
 
-**A revolutionary decentralized options trading platform with layered tokenization for maximum capital efficiency**
+**A revolutionary decentralized European-style options trading platform with layered tokenization for maximum capital efficiency**
 
-Built on Citrea testnet, this protocol enables users to create, trade, and exercise Bitcoin/Ethereum options while dramatically increasing capital utilization through innovative layered option structures.
+Built on Citrea testnet, this protocol enables users to create, trade, and settle Bitcoin/Ethereum options at maturity while dramatically increasing capital utilization through innovative layered option structures.
 
 ---
 
@@ -10,27 +10,28 @@ Built on Citrea testnet, this protocol enables users to create, trade, and exerc
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                        LAYERED OPTIONS PROTOCOL                         │
+│                    EUROPEAN LAYERED OPTIONS PROTOCOL                   │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
 │  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐     │
 │  │   PARENT OPTION │────│   CHILD OPTION  │────│  GRANDCHILD     │     │
 │  │                 │    │                 │    │  OPTION         │     │
 │  │ BTC Call $100K  │    │ BTC Call $110K  │    │ BTC Call $120K  │     │
+│  │ Writer: 1 BTC   │    │ Writer: Parent  │    │ Writer: Child   │     │
 │  │ Premium: $5K    │    │ Premium: $2K    │    │ Premium: $800   │     │
-│  │ Collateral: BTC │    │ Backed by Parent│    │ Backed by Child │     │
+│  │ (Paid by Buyer) │    │ (Paid by Buyer) │    │ (Paid by Buyer) │     │
 │  └─────────────────┘    └─────────────────┘    └─────────────────┘     │
 │           │                       │                       │             │
-│           └───────────────────────┼───────────────────────┘             │
+│           └──── SETTLEMENT AT MATURITY ────────────────────┘            │
 │                                   │                                     │
 │            💰 CAPITAL EFFICIENCY: 1 BTC → 3 OPTION POSITIONS           │
 │                                   │                                     │
 │  ┌─────────────────────────────────┼─────────────────────────────────┐   │
-│  │              ORACLE SYSTEM      │         SETTLEMENT ENGINE       │   │
+│  │         EUROPEAN SETTLEMENT     │      MATURITY PRICE LOCK        │   │
 │  │                                 │                                 │   │
 │  │  ┌─────────────┐  ┌─────────────┴─────────────┐  ┌─────────────┐  │   │
-│  │  │ BTC Price   │  │     Time Oracle           │  │ Auto-settle │  │   │
-│  │  │ Feed        │  │ (Real-time + Fast Forward)│  │ Engine      │  │   │
+│  │  │ BTC Price   │  │     Time Oracle           │  │ Maturity    │  │   │
+│  │  │ Feed        │  │ (Real-time + Fast Forward)│  │ Settlement  │  │   │
 │  │  └─────────────┘  └───────────────────────────┘  └─────────────┘  │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -38,96 +39,119 @@ Built on Citrea testnet, this protocol enables users to create, trade, and exerc
 
 ---
 
-## 💎 Capital Efficiency Innovation
+## 💎 European Options Innovation
 
-### Traditional Options vs. Layered Options
+### Key Features of European-Style Settlement
+
+#### **🟢 European Options Model**
+
+```
+✅ Options can ONLY be settled at maturity (no early exercise)
+✅ Maturity price is locked once and used for entire option chain  
+✅ Writers provide collateral in base asset (BTC/ETH)
+✅ Buyers pay premiums in stablecoin (USDC)
+✅ Automatic settlement based on maturity vs strike price
+```
+
+### Traditional Options vs. European Layered Options
 
 #### **🔴 Traditional Options Trading**
 
 ```
 Writer has 1 BTC → Creates 1 Option → Locks 1 BTC as collateral
+Writer also pays premium (WRONG) → Double cost for writer
 Capital Utilization: 100% = 1 position per 1 BTC
 ```
 
-#### **🟢 Our Layered Protocol**
+#### **🟢 Our European Layered Protocol**
 
 ```
-Writer has 1 BTC → Creates Parent Option → Uses Parent as collateral for Child Option →
-Uses Child as collateral for Grandchild Option
+Writer has 1 BTC → Creates Parent Option (locks BTC) → Buyer pays premium →
+Writer owns Parent Token → Uses Parent as collateral for Child Option → 
+Child Buyer pays premium → Writer owns Child Token → Creates Grandchild Option
 
 Capital Utilization: 300%+ = Multiple positions from same underlying asset
+Premium Flow: All premiums paid by BUYERS to writers (correct economic model)
 ```
 
-### **Real Example: 3x Capital Multiplication**
+### **Real Example: 3x Capital Multiplication with Proper Premium Flow**
 
-| Layer          | Option Type   | Strike Price | Premium Earned | Collateral Used     |
-| -------------- | ------------- | ------------ | -------------- | ------------------- |
-| **Parent**     | BTC Call      | $100,000     | $5,000         | 1 BTC               |
-| **Child**      | BTC Call      | $110,000     | $2,000         | Parent Option Token |
-| **Grandchild** | BTC Call      | $120,000     | $800           | Child Option Token  |
-| **TOTAL**      | **3 Options** | **-**        | **$7,800**     | **1 BTC Input**     |
+| Layer          | Option Type | Strike Price | Writer Action          | Buyer Action        | Settlement            |
+| -------------- | ----------- | ------------ | ---------------------- | ------------------- | --------------------- |
+| **Parent**     | BTC Call    | $100,000     | Locks 1 BTC           | Pays $5,000 premium | At maturity if ITM    |
+| **Child**      | BTC Call    | $110,000     | Uses Parent Token      | Pays $2,000 premium | At maturity if ITM    |
+| **Grandchild** | BTC Call    | $120,000     | Uses Child Token       | Pays $800 premium   | At maturity if ITM    |
+| **TOTAL**      | **3 Options** | **-**      | **1 BTC + Tokens**    | **$7,800 Total**    | **European Settlement** |
 
-**Result: 280% increase in premium income from same collateral!**
+**Result: Writer earns $7,800 in premiums from buyers using 1 BTC collateral!**
 
 ---
 
-## 🎪 How Layered Options Work
+## 🎪 European Layered Options Flow
 
-### **Step-by-Step Flow**
+### **Step-by-Step Process**
 
 ```mermaid
 graph TD
-    A[User Deposits 1 BTC] --> B[Creates Parent Call Option]
-    B --> C[Receives Parent NFT Token]
-    C --> D[Uses Parent NFT as Collateral]
-    D --> E[Creates Child Call Option]
-    E --> F[Receives Child NFT Token]
-    F --> G[Uses Child NFT as Collateral]
-    G --> H[Creates Grandchild Call Option]
-    H --> I[3 Active Options from 1 BTC!]
+    A[Writer Deposits 1 BTC] --> B[Creates Parent Call Option]
+    B --> C[Receives Parent NFT Token]  
+    C --> D[Buyer Pays $5000 Premium]
+    D --> E[Buyer Receives Parent NFT]
+    E --> F[Writer Uses Original BTC for Child]
+    F --> G[Creates Child Call Option]
+    G --> H[Child Buyer Pays $2000 Premium] 
+    H --> I[Settlement at Maturity Only]
+    I --> J[Maturity Price Locked]
+    J --> K[All Options Settled Automatically]
+    E --> F[Writer Uses Original BTC for Child]
+    F --> G[Creates Child Call Option]
+    G --> H[Child Buyer Pays $2000 Premium] 
+    H --> I[Settlement at Maturity Only]
+    I --> J[Maturity Price Locked]
+    J --> K[All Options Settled Automatically]
 
     style A fill:#ffeb3b
     style I fill:#4caf50
 ```
 
-### **Pricing Mathematics**
+### **European Settlement Model**
 
-Our protocol uses an **enhanced Black-Scholes model** for realistic pricing:
+Our protocol implements **European-style options** with sophisticated settlement:
 
 ```javascript
-Premium = BaseValue × VolatilityAdjustment × TimeDecay × MoneynessFactor
+// European Settlement Flow
+1. Option Creation: Writer locks collateral, sets premium
+2. Option Purchase: Buyer pays premium to writer  
+3. Maturity Reached: Anyone can trigger price lock
+4. Price Locked: Maturity price set for entire chain
+5. Settlement: Option holders claim payouts if ITM
 
-Where:
-- BaseValue = (CurrentPrice - StrikePrice) for calls
-- VolatilityAdjustment = sqrt(TimeToExpiry) × ImpliedVolatility
-- TimeDecay = exponential decay based on time remaining
-- MoneynessFactor = adjustment for how far ITM/OTM option is
+Settlement Payout:
+- CALL: max(MaturityPrice - StrikePrice, 0)
+- PUT: max(StrikePrice - MaturityPrice, 0)
 ```
 
-**Example Calculation:**
+**Example European Settlement:**
 
-- BTC Price: $95,000
-- Strike: $100,000
-- Time to Expiry: 30 days
-- Volatility: 80%
-- **Calculated Premium: ~$3,200**
+- BTC Maturity Price: $105,000
+- Parent CALL Strike: $100,000 → Payout: $5,000 ✅
+- Child CALL Strike: $110,000 → Payout: $0 ❌  
+- PUT Strike: $102,000 → Payout: $0 ❌
 
 ---
 
-## 🏦 Smart Contract Addresses
+## 🏦 Smart Contract Architecture
 
-### **📍 Citrea Testnet Deployment**
+### **📍 Core Contract System**
 
-| Contract                     | Address                                      | Purpose                     |
-| ---------------------------- | -------------------------------------------- | --------------------------- |
-| **🎯 LayeredOptionsTrading** | `0x5159326b4faf867eb45c324842e77543a8eae63d` | Core layered options logic  |
-| **💱 OptionsTrading**        | `0x1ab4a87d2afbd5647032b7acb9cbab225a9c42ba` | Basic options trading       |
-| **🪙 StableCoin (USDC)**     | `0x807fcda7a2d39f5cf52dc84a05477bb6857b7f80` | Premium payments            |
-| **₿ Bitcoin Token**          | `0x4dc54591faba530bf5fa3087b7ca50234b3dfe8a` | Underlying asset            |
-| **🌊 WrappedNative**         | `0xb9c28f1d335a7f0fcfd6c37268bc12cf97dd3202` | Wrapped cBTC                |
-| **📊 BTC Price Feed**        | `0xdefd3f543b9b815c3868747ccfb69b207fa52642` | Real-time BTC prices        |
-| **📈 ETH Price Feed**        | `0x8f643b663cbea913157f503a27294a7b430d7cfe` | Real-time ETH prices        |
-| **⏰ Time Oracle**           | `0xf634540dfe9a6337d82f1718576eca007d93c42d` | Time manipulation for demos |
+| Contract                     | Purpose                                   | Key Functions                                    |
+| ---------------------------- | ----------------------------------------- | ------------------------------------------------ |
+| **🎯 LayeredOptionsTrading** | Core European options with layering      | `createLayeredOption`, `settleOption`, `purchaseOption` |
+| **💱 OptionsTrading**        | Basic European options                    | `createOption`, `settleOption`, `purchaseOption` |  
+| **🪙 StableCoin (USDC)**     | Premium payments in stablecoin           | Standard ERC20 functions                         |
+| **₿ Asset Tokens**           | Underlying assets (BTC/ETH)              | Standard ERC20 functions                         |
+| **📊 Price Feeds**           | Oracle price data                        | `latestRoundData`, `setPrice`                    |
+| **⏰ Time Oracle**           | Time manipulation for testing            | `getCurrentTime`, `fastForward`                  |
 
 ### **🌐 Network Configuration**
 
