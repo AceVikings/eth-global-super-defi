@@ -33,7 +33,7 @@ const LayeredOptionsPage = () => {
     strikePrice: "45000",
     expirationDays: 30,
     premium: "0.001",
-    premiumToken: "0x0000000000000000000000000000000000000000", // ETH
+    // premiumToken REMOVED - writers provide collateral, not premium
     optionType: OptionType.CALL,
     parentTokenId: 0,
   });

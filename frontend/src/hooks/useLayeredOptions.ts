@@ -3,7 +3,7 @@ import {
   useReadContract,
   useWaitForTransactionReceipt,
 } from "wagmi";
-import { parseEther, parseUnits, formatUnits } from "viem";
+import { parseUnits, formatUnits } from "viem";
 import {
   CONTRACT_ADDRESSES,
   LAYERED_OPTIONS_ABI,
@@ -18,7 +18,7 @@ export interface CreateOptionParams {
   strikePrice: string; // In dollars (e.g., "45000")
   expirationDays: number;
   premium: string; // Premium amount
-  premiumToken: string; // Premium token address (0x0 for ETH)
+  // premiumToken REMOVED - writers provide collateral, not premium
   optionType: OptionType; // CALL or PUT
   parentTokenId?: number; // 0 for root options
 }
@@ -85,13 +85,10 @@ export function useLayeredOptions() {
     try {
       setIsCreating(true);
       const strikePrice = parseUnits(params.strikePrice, 18);
-      const expirationTime = BigInt(
+      const maturity = BigInt(
         Math.floor(Date.now() / 1000) + params.expirationDays * 24 * 60 * 60
       );
-      const premium =
-        params.premiumToken === "0x0000000000000000000000000000000000000000"
-          ? parseEther(params.premium)
-          : parseUnits(params.premium, 6); // Assuming USDC is 6 decimals
+      const premium = parseUnits(params.premium, 18); // Premium in wei for calculations
       const parentTokenId = BigInt(params.parentTokenId || 0);
 
       await writeCreateOption({
@@ -101,16 +98,13 @@ export function useLayeredOptions() {
         args: [
           params.baseAsset as `0x${string}`,
           strikePrice,
-          expirationTime,
+          maturity, // Changed from expirationTime to maturity
           premium,
           parentTokenId,
           params.optionType,
-          params.premiumToken as `0x${string}`,
+          // premiumToken parameter REMOVED - matches contract ABI
         ],
-        value:
-          params.premiumToken === "0x0000000000000000000000000000000000000000"
-            ? premium
-            : 0n,
+        // value REMOVED - writers provide collateral, not pay premium via ETH
       });
     } catch (error) {
       setIsCreating(false);
