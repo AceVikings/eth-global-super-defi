@@ -957,29 +957,37 @@ const LayeredOptionsPage = () => {
               <div className="space-y-6">
                 <div className="terminal-window">
                   <div className="terminal-title">
-                    [INFO] PURCHASING OPTIONS
+                    [INFO] PURCHASING EUROPEAN OPTIONS
                   </div>
                   <div className="terminal-content font-mono text-sm leading-relaxed">
                     <p className="mb-4">
-                      PURCHASE EXISTING OPTIONS FROM THE MARKET:
+                      PURCHASE EXISTING EUROPEAN-STYLE OPTIONS:
                     </p>
                     <ul className="space-y-2">
                       <li style={{ color: "var(--retro-green)" }}>
-                        → PAY THE PREMIUM TO ACQUIRE OPTION RIGHTS
+                        → PAY PREMIUM IN USDC TO ACQUIRE OPTION RIGHTS
                       </li>
                       <li style={{ color: "var(--retro-green)" }}>
-                        → GAIN ABILITY TO EXERCISE BEFORE EXPIRATION
+                        → OPTIONS SETTLE AUTOMATICALLY AT MATURITY DATE
+                      </li>
+                      <li style={{ color: "var(--retro-amber)" }}>
+                        → CANNOT EXERCISE EARLY - WAIT FOR MATURITY
                       </li>
                       <li style={{ color: "var(--retro-green)" }}>
                         → CREATE CHILD OPTIONS IF PARENT OPTION
                       </li>
                       <li style={{ color: "var(--retro-green)" }}>
-                        → TRANSFER TO OTHER USERS IF DESIRED
+                        → TRANSFER TO OTHER USERS ANYTIME
                       </li>
                     </ul>
-                    <div className="mt-4 p-2 border border-yellow-500">
+                    <div className="mt-4 p-2 border border-blue-500">
+                      <p style={{ color: "var(--retro-blue)" }} className="text-xs">
+                        ℹ️ EUROPEAN STYLE: Options automatically settle at maturity based on spot price vs strike price. No early exercise allowed.
+                      </p>
+                    </div>
+                    <div className="mt-2 p-2 border border-yellow-500">
                       <p style={{ color: "var(--retro-amber)" }}>
-                        ⚠️ ENSURE SUFFICIENT ETH BALANCE FOR PREMIUM PAYMENT
+                        ⚠️ ENSURE SUFFICIENT USDC BALANCE FOR PREMIUM PAYMENT
                       </p>
                     </div>
                   </div>

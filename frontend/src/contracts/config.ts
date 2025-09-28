@@ -1,14 +1,13 @@
 // Contract addresses on Citrea testnet - Updated with new deployment (Sept 28, 2025)
 export const CONTRACT_ADDRESSES = {
   LAYERED_OPTIONS_TRADING:
-    "0x78650fe648fea6a50523fc0c90b100103b3a815f" as `0x${string}`,
-  TIME_ORACLE: "0x7dc5f317cf0d928bfa0f87b9eefaeef2e15318a4" as `0x${string}`,
-  MOCK_WBTC: "0xd78efe947fdceab5665a5264244ce4b7f9209b62" as `0x${string}`,
-  STABLECOIN: "0x6dad502a7b4881d53f615fbb4bfbe01033b11915" as `0x${string}`,
-  // Legacy compatibility
-  BTC_PRICE_FEED: "0x2574b49a1ded38c9f239682769e3c3e708797c7a" as `0x${string}`,
-  ETH_PRICE_FEED: "0x7d0c4127c937aaf59b0af8f686d63d602e27a777" as `0x${string}`,
-  MOCK_WETH: "0x52e5d5ff769e71dfeead1a3fc5c440f87031a3e3" as `0x${string}`,
+    "0x0180e63fce09229108e9cf26a51e304ce520847a" as `0x${string}`,
+  TIME_ORACLE: "0xce9ba295ce52b0a55e44ff3acafbc0e272dbd3f0" as `0x${string}`,
+  MOCK_WBTC: "0x8daa9f780e2e8a86da59d4eec67f1368d672ff58" as `0x${string}`,
+  MOCK_WETH: "0x6a16acdbede8627f670263eb1c2c61dea912414e" as `0x${string}`,
+  STABLECOIN: "0x18e06367f3a55cc1fb4a084480f162422b998f99" as `0x${string}`,
+  BTC_PRICE_FEED: "0xf6c5002f5b13bd20425167817a033448539466cd" as `0x${string}`,
+  ETH_PRICE_FEED: "0x205d6a03dade4a45aa595c465926d248db70ca3d" as `0x${string}`,
 } as const;
 
 // Layered Options Trading ABI (updated with call/put support)
