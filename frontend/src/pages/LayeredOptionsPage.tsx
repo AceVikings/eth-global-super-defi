@@ -96,6 +96,12 @@ const LayeredOptionsPage = () => {
     expirationDate: purchaseExpirationDate,
   } = useOptionDetails(purchaseForm.tokenId);
 
+  // Option details for child option parent
+  const {
+    option: parentOptionDetails,
+    expirationDate: parentExpirationDate,
+  } = useOptionDetails(childForm.parentId);
+
   const { balance: userBalance, hasOption } = useUserOptionBalance(
     address,
     selectedTokenId
@@ -137,22 +143,22 @@ const LayeredOptionsPage = () => {
       return { premium: "0", loading: false, error: null };
     }
 
-    // Get parent option details to inherit maturity and option type
-    const parentOption = allOptions?.find(opt => opt.tokenId === String(childForm.parentId));
-    if (!parentOption) {
+    // Use direct contract query for parent option details (same as purchase tab)
+    if (!parentOptionDetails) {
       return { premium: "0", loading: false, error: "Parent option not found" };
     }
 
     return calculateOptionPremium({
-      baseAsset: parentOption.baseAsset,
+      baseAsset: parentOptionDetails.baseAsset,
       strikePrice: childForm.strikePrice,
-      expirationDate: new Date(parseInt(parentOption.expirationTime) * 1000), // Use parent maturity
-      optionType: "CALL", // Assume CALL for now - we'll get this from contract later
+      expirationDate: parentExpirationDate || new Date(), // Use parent maturity
+      optionType: parentOptionDetails.optionType === OptionType.CALL ? "CALL" : "PUT", 
     });
   }, [
     childForm.strikePrice,
     childForm.parentId,
-    allOptions,
+    parentOptionDetails,
+    parentExpirationDate,
     calculateOptionPremium,
   ]);
 
@@ -632,10 +638,10 @@ const LayeredOptionsPage = () => {
 
                     <button
                       type="submit"
-                      disabled={!isConnected || isCreating}
+                      disabled={!isConnected || isCreating || isApproving}
                       className="retro-button-primary w-full py-3 px-6 font-mono"
                     >
-                      {isCreating ? "CREATING..." : "CREATE PARENT OPTION"}
+                      {isApproving ? "APPROVING TOKENS..." : isCreating ? "CREATING..." : "CREATE PARENT OPTION"}
                     </button>
 
                     {createHash && (
@@ -911,7 +917,12 @@ const LayeredOptionsPage = () => {
                                 TYPE:
                               </span>
                               <span style={{ color: "var(--retro-green)" }}>
-                                {purchaseViewOption.baseAsset === CONTRACT_ADDRESSES.MOCK_WBTC ? "WBTC" : "WETH"} {purchaseViewOption.optionType === 0 ? "CALL" : "PUT"}
+                                {(() => {
+                                  const assetAddr = purchaseViewOption.baseAsset.toLowerCase();
+                                  if (assetAddr === CONTRACT_ADDRESSES.MOCK_WBTC.toLowerCase()) return "WBTC";
+                                  if (assetAddr === CONTRACT_ADDRESSES.MOCK_WETH.toLowerCase()) return "WETH";
+                                  return "UNKNOWN";
+                                })()} {purchaseViewOption.optionType === 0 ? "CALL" : "PUT"}
                               </span>
                             </div>
                             <div className="flex justify-between">
@@ -946,10 +957,10 @@ const LayeredOptionsPage = () => {
 
                   <button
                     type="submit"
-                    disabled={!isConnected || isPurchasing || !purchaseViewOption}
+                    disabled={!isConnected || isPurchasing || isApproving || !purchaseViewOption}
                     className="retro-button-primary w-full py-4 font-mono text-sm uppercase tracking-wider disabled:opacity-50"
                   >
-                    {isPurchasing ? "PURCHASING..." : "PURCHASE OPTION"}
+                    {isApproving ? "APPROVING USDC..." : isPurchasing ? "PURCHASING..." : "PURCHASE OPTION"}
                   </button>
                 </form>
               </div>

@@ -49,8 +49,7 @@ export function useLayeredOptions() {
     useWriteContract();
   const { writeContract: writeTransfer, data: transferHash } =
     useWriteContract();
-  const { writeContract: writeApprove, data: approveHash } =
-    useWriteContract();
+  const { writeContract: writeApprove } = useWriteContract();
   const { writeContract: writeAddAsset, data: addAssetHash } =
     useWriteContract();
 
