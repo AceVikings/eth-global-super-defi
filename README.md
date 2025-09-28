@@ -89,9 +89,11 @@ CitreaLayeredOptionsTrading (ERC-1155)
 # Complete realistic demo (local)
 npx hardhat run scripts/deploy-and-demo-testnet.ts --network localhost
 
-# Citrea testnet deployment
+# Citrea testnet deployment (✅ ALREADY DEPLOYED - see contract addresses below)
 npx hardhat run scripts/deploy-and-demo-testnet.ts --network citrea
 ```
+
+> **Status:** ✅ **LIVE ON CITREA TESTNET** - Contracts deployed and initialized with USDC, WBTC, and WETH support!
 
 ### Demo Features
 
@@ -122,6 +124,20 @@ citrea: {
 - **Transaction Timing:** 15-second delays for testnet compatibility
 - **Error Recovery:** Automatic fund return with retry logic
 - **Gas Management:** Conservative estimates with proper buffering
+
+### 📋 Deployed Contract Addresses (Citrea Testnet)
+
+| Contract                    | Address                                      | Description                    |
+| --------------------------- | -------------------------------------------- | ------------------------------ |
+| **LayeredOptions**          | `0x0180e63fce09229108e9cf26a51e304ce520847a` | Main options trading contract  |
+| **USDC (Stable Coin)**      | `0x18e06367f3a55cc1fb4a084480f162422b998f99` | Premium payment token          |
+| **WBTC (Bitcoin)**          | `0x8daa9f780e2e8a86da59d4eec67f1368d672ff58` | Bitcoin options underlying     |
+| **WETH (Ethereum)**         | `0x6a16acdbede8627f670263eb1c2c61dea912414e` | Ethereum options underlying    |
+| **TimeOracle**              | `0xce9ba295ce52b0a55e44ff3acafbc0e272dbd3f0` | Time manipulation for testing  |
+| **BTC Price Feed**          | `0xf6c5002f5b13bd20425167817a033448539466cd` | Bitcoin USD price oracle       |
+| **ETH Price Feed**          | `0x205d6a03dade4a45aa595c465926d248db70ca3d` | Ethereum USD price oracle      |
+
+> **Chain ID:** 5115 | **RPC:** https://rpc.testnet.citrea.xyz | **Features:** European-style settlement, layered tokenization
 
 ## 📊 Business Logic Validation
 

@@ -970,17 +970,22 @@ await bitcoinToken.faucet(1); // 1 BTC
 - **Gas Optimized**: Using Solidity 0.8.28 with IR compilation
 - **Secure**: ReentrancyGuard, SafeERC20, and comprehensive access controls
 
-## 📋 Contract Addresses (After Deployment)
+## 📋 Contract Addresses (Citrea Testnet)
 
-| Contract                | Address | Description                   |
-| ----------------------- | ------- | ----------------------------- |
-| CitreaOptionsTrading    | `TBD`   | Main options trading contract |
-| TimeOracle              | `TBD`   | Time manipulation oracle      |
-| MockERC20 (USDC)        | `TBD`   | Stable coin for collateral    |
-| MockERC20 (BTC)         | `TBD`   | Bitcoin token for testing     |
-| WrappedNativeToken      | `TBD`   | Wrapped cBTC                  |
-| MockPriceFeed (BTC/USD) | `TBD`   | Bitcoin price feed            |
-| MockPriceFeed (ETH/USD) | `TBD`   | Ethereum price feed           |
+| Contract                        | Address                                      | Description                   |
+| ------------------------------- | -------------------------------------------- | ----------------------------- |
+| CitreaLayeredOptionsTrading     | `0x0180e63fce09229108e9cf26a51e304ce520847a` | Main options trading contract |
+| TimeOracle                      | `0xce9ba295ce52b0a55e44ff3acafbc0e272dbd3f0` | Time manipulation oracle      |
+| MockERC20 (USDC)                | `0x18e06367f3a55cc1fb4a084480f162422b998f99` | Stable coin for premiums      |
+| MockERC20 (WBTC)                | `0x8daa9f780e2e8a86da59d4eec67f1368d672ff58` | Bitcoin token for options     |
+| MockERC20 (WETH)                | `0x6a16acdbede8627f670263eb1c2c61dea912414e` | Ethereum token for options    |
+| MockPriceFeed (BTC/USD)         | `0xf6c5002f5b13bd20425167817a033448539466cd` | Bitcoin price feed            |
+| MockPriceFeed (ETH/USD)         | `0x205d6a03dade4a45aa595c465926d248db70ca3d` | Ethereum price feed           |
+
+> **Network:** Citrea Testnet (Chain ID: 5115)  
+> **RPC URL:** https://rpc.testnet.citrea.xyz  
+> **Deployed:** 2024-12-29  
+> **Features:** European-style options, layered tokenization, oracle-based pricing
 
 ## 🧪 Testing Scenarios
 
