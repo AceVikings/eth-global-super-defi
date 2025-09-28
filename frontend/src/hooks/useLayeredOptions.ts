@@ -36,6 +36,7 @@ export function useLayeredOptions() {
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isExercising, setIsExercising] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
 
   // Write contract hooks
   const { writeContract: writeCreateOption, data: createHash } =
@@ -47,6 +48,8 @@ export function useLayeredOptions() {
   const { writeContract: writeExercise, data: exerciseHash } =
     useWriteContract();
   const { writeContract: writeTransfer, data: transferHash } =
+    useWriteContract();
+  const { writeContract: writeApprove, data: approveHash } =
     useWriteContract();
   const { writeContract: writeAddAsset, data: addAssetHash } =
     useWriteContract();
@@ -84,6 +87,23 @@ export function useLayeredOptions() {
   const createLayeredOption = async (params: CreateOptionParams) => {
     try {
       setIsCreating(true);
+      
+      // First approve the base asset for collateral
+      setIsApproving(true);
+      await writeApprove({
+        address: params.baseAsset as `0x${string}`,
+        abi: MOCK_ERC20_ABI,
+        functionName: "approve",
+        args: [
+          CONTRACT_ADDRESSES.LAYERED_OPTIONS_TRADING,
+          parseUnits("1000000", 18) // Approve large amount for simplicity
+        ]
+      });
+      
+      // Wait a moment for approval to complete
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      setIsApproving(false);
+      
       const strikePrice = parseUnits(params.strikePrice, 18);
       const maturity = BigInt(
         Math.floor(Date.now() / 1000) + params.expirationDays * 24 * 60 * 60
@@ -108,6 +128,7 @@ export function useLayeredOptions() {
       });
     } catch (error) {
       setIsCreating(false);
+      setIsApproving(false);
       throw error;
     }
   };
@@ -178,6 +199,23 @@ export function useLayeredOptions() {
   const purchaseOption = async (tokenId: number) => {
     try {
       setIsPurchasing(true);
+      
+      // First approve USDC for premium payment
+      setIsApproving(true);
+      await writeApprove({
+        address: CONTRACT_ADDRESSES.STABLECOIN as `0x${string}`,
+        abi: MOCK_ERC20_ABI,
+        functionName: "approve",
+        args: [
+          CONTRACT_ADDRESSES.LAYERED_OPTIONS_TRADING,
+          parseUnits("1000000", 6) // Approve large USDC amount (6 decimals)
+        ]
+      });
+      
+      // Wait a moment for approval to complete
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      setIsApproving(false);
+      
       await writePurchase({
         address: CONTRACT_ADDRESSES.LAYERED_OPTIONS_TRADING,
         abi: LAYERED_OPTIONS_ABI,
@@ -186,6 +224,7 @@ export function useLayeredOptions() {
       });
     } catch (error) {
       setIsPurchasing(false);
+      setIsApproving(false);
       throw error;
     }
   };
@@ -222,6 +261,7 @@ export function useLayeredOptions() {
     isPurchasing: isPurchasing || isPurchasePending,
     isExercising: isExercising || isExercisePending,
     isTransferring: isTransferring || isTransferPending,
+    isApproving, // Add approval state
 
     // Transaction hashes
     createHash,

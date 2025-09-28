@@ -66,6 +66,7 @@ const LayeredOptionsPage = () => {
     isPurchasing,
     isExercising,
     isTransferring,
+    isApproving,
     nextTokenId,
     createHash,
     createChildHash,
