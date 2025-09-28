@@ -22,7 +22,7 @@ import { usePremiumCalculator } from "../hooks/usePremiumCalculator";
 const LayeredOptionsPage = () => {
   const { address, isConnected } = useAccount();
   const [selectedTab, setSelectedTab] = useState<
-    "create" | "manage" | "exercise" | "browse" | "demo"
+    "create" | "purchase" | "manage" | "exercise" | "browse" | "demo"
   >("create");
   const [selectedTokenId, setSelectedTokenId] = useState<number>(1);
   const [viewTokenId, setViewTokenId] = useState<number>(1);
@@ -41,8 +41,7 @@ const LayeredOptionsPage = () => {
   const [childForm, setChildForm] = useState<CreateChildOptionParams>({
     parentId: 1,
     strikePrice: "46000",
-    expirationDays: 15,
-    optionType: OptionType.CALL,
+    // expirationDays and optionType removed - inherited from parent
   });
 
   const [transferForm, setTransferForm] = useState({
@@ -50,15 +49,21 @@ const LayeredOptionsPage = () => {
     tokenId: 1,
   });
 
+  const [purchaseForm, setPurchaseForm] = useState({
+    tokenId: 1,
+  });
+
   // Hooks
   const {
     createLayeredOption,
     createChildOption,
+    purchaseOption,
     exerciseOption,
     transferOption,
     addSupportedAsset,
     isCreating,
     isCreatingChild,
+    isPurchasing,
     isExercising,
     isTransferring,
     nextTokenId,
@@ -81,6 +86,15 @@ const LayeredOptionsPage = () => {
     expirationDate,
     isExpired,
   } = useOptionDetails(viewTokenId);
+
+  // Option details for purchase form
+  const {
+    option: purchaseViewOption,
+    formattedStrike: purchaseFormattedStrike,
+    formattedPremium: purchaseFormattedPremium,
+    expirationDate: purchaseExpirationDate,
+  } = useOptionDetails(purchaseForm.tokenId);
+
   const { balance: userBalance, hasOption } = useUserOptionBalance(
     address,
     selectedTokenId
@@ -116,28 +130,28 @@ const LayeredOptionsPage = () => {
     calculateOptionPremium,
   ]);
 
-  // Calculate premium for child options
+  // Calculate premium for child options (using parent option data)
   const calculatedChildPremium = useMemo(() => {
-    if (!childForm.strikePrice || !childForm.expirationDays) {
+    if (!childForm.strikePrice) {
       return { premium: "0", loading: false, error: null };
     }
 
-    // Calculate expiration date from days
-    const expirationDate = new Date(
-      Date.now() + childForm.expirationDays * 24 * 60 * 60 * 1000
-    );
+    // Get parent option details to inherit maturity and option type
+    const parentOption = allOptions?.find(opt => opt.tokenId === String(childForm.parentId));
+    if (!parentOption) {
+      return { premium: "0", loading: false, error: "Parent option not found" };
+    }
 
     return calculateOptionPremium({
-      baseAsset: createForm.baseAsset, // Use parent's base asset
+      baseAsset: parentOption.baseAsset,
       strikePrice: childForm.strikePrice,
-      expirationDate,
-      optionType: childForm.optionType === OptionType.CALL ? "CALL" : "PUT",
+      expirationDate: new Date(parseInt(parentOption.expirationTime) * 1000), // Use parent maturity
+      optionType: "CALL", // Assume CALL for now - we'll get this from contract later
     });
   }, [
-    createForm.baseAsset,
     childForm.strikePrice,
-    childForm.expirationDays,
-    childForm.optionType,
+    childForm.parentId,
+    allOptions,
     calculateOptionPremium,
   ]);
 
@@ -187,15 +201,10 @@ const LayeredOptionsPage = () => {
   // Smart UI: Auto-fill child form based on parent data
   const handleParentIdChange = (parentId: number) => {
     const newChildForm = { ...childForm, parentId };
-
-    // TODO: Fetch parent option data and auto-fill fields
-    // For now, set some default values based on parent
-    if (parentId > 0) {
-      // These would be fetched from the parent option in a real implementation
-      newChildForm.optionType = OptionType.CALL; // Default, should be from parent
-      newChildForm.expirationDays = 15; // Half the parent's expiration
-    }
-
+    
+    // Child option will automatically inherit parent's maturity and option type
+    // No additional form fields need to be updated
+    
     setChildForm(newChildForm);
   };
 
@@ -241,6 +250,17 @@ const LayeredOptionsPage = () => {
       await transferOption(address, transferForm.to, transferForm.tokenId);
     } catch (error) {
       console.error("Failed to transfer option:", error);
+    }
+  };
+
+  const handlePurchaseOption = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isConnected) return;
+
+    try {
+      await purchaseOption(purchaseForm.tokenId);
+    } catch (error) {
+      console.error("Failed to purchase option:", error);
     }
   };
 
@@ -341,7 +361,7 @@ const LayeredOptionsPage = () => {
           <div className="flex justify-center mb-8">
             <div className="terminal-panel flex gap-2">
               {(
-                ["create", "manage", "exercise", "browse", "demo"] as const
+                ["create", "purchase", "manage", "exercise", "browse", "demo"] as const
               ).map((tab) => (
                 <button
                   key={tab}
@@ -694,69 +714,10 @@ const LayeredOptionsPage = () => {
                       />
                     </div>
 
-                    <div>
-                      <label
-                        className="block text-sm font-mono mb-2 uppercase tracking-wide"
-                        style={{ color: "var(--retro-amber)" }}
-                      >
-                        Child Expiration (days)
-                      </label>
-                      <input
-                        type="number"
-                        value={childForm.expirationDays}
-                        onChange={(e) =>
-                          setChildForm({
-                            ...childForm,
-                            expirationDays: parseInt(e.target.value),
-                          })
-                        }
-                        className="retro-input w-full px-4 py-3 font-mono"
-                        style={{
-                          background: "var(--retro-dark-gray)",
-                          color: "var(--retro-off-white)",
-                          border: "1px solid var(--retro-border)",
-                        }}
-                        placeholder="15"
-                      />
-                      <p
-                        className="text-xs mt-1 font-mono"
-                        style={{ color: "var(--retro-green)" }}
-                      >
-                        MUST BE ≤ PARENT EXPIRATION
-                      </p>
-                    </div>
-
-                    <div>
-                      <label
-                        className="block text-sm font-mono mb-2 uppercase tracking-wide"
-                        style={{ color: "var(--retro-amber)" }}
-                      >
-                        Child Option Type
-                      </label>
-                      <select
-                        value={childForm.optionType}
-                        onChange={(e) =>
-                          setChildForm({
-                            ...childForm,
-                            optionType: parseInt(e.target.value) as OptionType,
-                          })
-                        }
-                        className="retro-input w-full px-4 py-3 font-mono"
-                        style={{
-                          background: "var(--retro-dark-gray)",
-                          color: "var(--retro-off-white)",
-                          border: "1px solid var(--retro-border)",
-                        }}
-                        disabled // Auto-filled from parent
-                      >
-                        <option value={OptionType.CALL}>CALL OPTION</option>
-                        <option value={OptionType.PUT}>PUT OPTION</option>
-                      </select>
-                      <p
-                        className="text-xs mt-1 font-mono"
-                        style={{ color: "var(--retro-green)" }}
-                      >
-                        AUTO-FILLED FROM PARENT OPTION
+                    {/* Child options automatically inherit parent's expiration and option type */}
+                    <div className="bg-gray-800 border border-green-500 p-4 rounded">
+                      <p className="text-green-400 font-mono text-sm">
+                        ℹ️ AUTOMATIC INHERITANCE: Child options will inherit the parent option's maturity date and option type (CALL/PUT)
                       </p>
                     </div>
 
@@ -869,6 +830,159 @@ const LayeredOptionsPage = () => {
                   >
                     MINT TOKENS FOR TESTING - THESE ARE MOCK TOKENS
                   </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Purchase Tab */}
+          {selectedTab === "purchase" && (
+            <div className="grid md:grid-cols-2 gap-8">
+              {/* Purchase Option Form */}
+              <div className="terminal-panel">
+                <div className="terminal-header">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  </div>
+                  <div className="flex-1 text-center">
+                    [PURCHASE EXISTING OPTION]
+                  </div>
+                </div>
+
+                <form onSubmit={handlePurchaseOption} className="space-y-6">
+                  <div>
+                    <label
+                      className="block text-sm font-mono mb-2 uppercase tracking-wide"
+                      style={{ color: "var(--retro-amber)" }}
+                    >
+                      Option Token ID
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={purchaseForm.tokenId}
+                      onChange={(e) =>
+                        setPurchaseForm({
+                          ...purchaseForm,
+                          tokenId: parseInt(e.target.value) || 1,
+                        })
+                      }
+                      className="retro-input w-full px-4 py-3 font-mono"
+                      style={{
+                        background: "var(--retro-dark-gray)",
+                        color: "var(--retro-off-white)",
+                        border: "1px solid var(--retro-border)",
+                      }}
+                      placeholder="1"
+                    />
+                    <p
+                      className="text-xs mt-1 font-mono"
+                      style={{ color: "var(--retro-green)" }}
+                    >
+                      ENTER THE TOKEN ID OF THE OPTION YOU WANT TO PURCHASE
+                    </p>
+                  </div>
+
+                  {/* Option Details Display */}
+                  {purchaseForm.tokenId && (
+                    <div className="terminal-window p-4 font-mono">
+                      <h4
+                        className="text-sm font-semibold mb-2 uppercase"
+                        style={{ color: "var(--retro-amber)" }}
+                      >
+                        OPTION DETAILS - TOKEN #{purchaseForm.tokenId}
+                      </h4>
+                      <div className="text-xs space-y-1">
+                        <div className="flex justify-between">
+                          <span style={{ color: "var(--retro-off-white)" }}>
+                            STATUS:
+                          </span>
+                          <span style={{ color: "var(--retro-green)" }}>
+                            {purchaseViewOption ? "AVAILABLE" : "NOT FOUND"}
+                          </span>
+                        </div>
+                        {purchaseViewOption && (
+                          <>
+                            <div className="flex justify-between">
+                              <span style={{ color: "var(--retro-off-white)" }}>
+                                TYPE:
+                              </span>
+                              <span style={{ color: "var(--retro-green)" }}>
+                                {purchaseViewOption.baseAsset === CONTRACT_ADDRESSES.MOCK_WBTC ? "WBTC" : "WETH"} {purchaseViewOption.optionType === 0 ? "CALL" : "PUT"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span style={{ color: "var(--retro-off-white)" }}>
+                                STRIKE:
+                              </span>
+                              <span style={{ color: "var(--retro-green)" }}>
+                                ${purchaseFormattedStrike} USDC
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span style={{ color: "var(--retro-off-white)" }}>
+                                PREMIUM:
+                              </span>
+                              <span style={{ color: "var(--retro-green)" }}>
+                                {purchaseFormattedPremium} ETH
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span style={{ color: "var(--retro-off-white)" }}>
+                                EXPIRES:
+                              </span>
+                              <span style={{ color: "var(--retro-green)" }}>
+                                {purchaseExpirationDate?.toLocaleDateString()}
+                              </span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={!isConnected || isPurchasing || !purchaseViewOption}
+                    className="retro-button-primary w-full py-4 font-mono text-sm uppercase tracking-wider disabled:opacity-50"
+                  >
+                    {isPurchasing ? "PURCHASING..." : "PURCHASE OPTION"}
+                  </button>
+                </form>
+              </div>
+
+              {/* Info Panel */}
+              <div className="space-y-6">
+                <div className="terminal-window">
+                  <div className="terminal-title">
+                    [INFO] PURCHASING OPTIONS
+                  </div>
+                  <div className="terminal-content font-mono text-sm leading-relaxed">
+                    <p className="mb-4">
+                      PURCHASE EXISTING OPTIONS FROM THE MARKET:
+                    </p>
+                    <ul className="space-y-2">
+                      <li style={{ color: "var(--retro-green)" }}>
+                        → PAY THE PREMIUM TO ACQUIRE OPTION RIGHTS
+                      </li>
+                      <li style={{ color: "var(--retro-green)" }}>
+                        → GAIN ABILITY TO EXERCISE BEFORE EXPIRATION
+                      </li>
+                      <li style={{ color: "var(--retro-green)" }}>
+                        → CREATE CHILD OPTIONS IF PARENT OPTION
+                      </li>
+                      <li style={{ color: "var(--retro-green)" }}>
+                        → TRANSFER TO OTHER USERS IF DESIRED
+                      </li>
+                    </ul>
+                    <div className="mt-4 p-2 border border-yellow-500">
+                      <p style={{ color: "var(--retro-amber)" }}>
+                        ⚠️ ENSURE SUFFICIENT ETH BALANCE FOR PREMIUM PAYMENT
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

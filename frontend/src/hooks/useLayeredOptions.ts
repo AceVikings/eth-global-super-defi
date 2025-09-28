@@ -26,13 +26,14 @@ export interface CreateOptionParams {
 export interface CreateChildOptionParams {
   parentId: number;
   strikePrice: string; // In dollars
-  expirationDays: number;
-  optionType: OptionType; // CALL or PUT
+  // expirationDays REMOVED - child options inherit parent maturity automatically
+  // optionType REMOVED - child options inherit parent option type
 }
 
 export function useLayeredOptions() {
   const [isCreating, setIsCreating] = useState(false);
   const [isCreatingChild, setIsCreatingChild] = useState(false);
+  const [isPurchasing, setIsPurchasing] = useState(false);
   const [isExercising, setIsExercising] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);
 
@@ -40,6 +41,8 @@ export function useLayeredOptions() {
   const { writeContract: writeCreateOption, data: createHash } =
     useWriteContract();
   const { writeContract: writeCreateChild, data: createChildHash } =
+    useWriteContract();
+  const { writeContract: writePurchase, data: purchaseHash } =
     useWriteContract();
   const { writeContract: writeExercise, data: exerciseHash } =
     useWriteContract();
@@ -56,6 +59,10 @@ export function useLayeredOptions() {
   const { isLoading: isChildPending, isSuccess: isChildSuccess } =
     useWaitForTransactionReceipt({
       hash: createChildHash,
+    });
+  const { isLoading: isPurchasePending, isSuccess: isPurchaseSuccess } =
+    useWaitForTransactionReceipt({
+      hash: purchaseHash,
     });
   const { isLoading: isExercisePending, isSuccess: isExerciseSuccess } =
     useWaitForTransactionReceipt({
@@ -111,14 +118,13 @@ export function useLayeredOptions() {
     }
   };
 
-  // Create a child option
+  // Create a child option (inherits parent maturity automatically)
   const createChildOption = async (params: CreateChildOptionParams) => {
     try {
       setIsCreatingChild(true);
       const strikePrice = parseUnits(params.strikePrice, 18);
-      const expirationTime = BigInt(
-        Math.floor(Date.now() / 1000) + params.expirationDays * 24 * 60 * 60
-      );
+      // No expiration time needed - child inherits parent maturity
+      // No option type needed - child inherits parent option type
 
       await writeCreateChild({
         address: CONTRACT_ADDRESSES.LAYERED_OPTIONS_TRADING,
@@ -127,8 +133,7 @@ export function useLayeredOptions() {
         args: [
           BigInt(params.parentId),
           strikePrice,
-          expirationTime,
-          params.optionType,
+          // Only 2 parameters - maturity and option type inherited from parent!
         ],
       });
     } catch (error) {
@@ -175,6 +180,22 @@ export function useLayeredOptions() {
     }
   };
 
+  // Purchase an existing option from another user
+  const purchaseOption = async (tokenId: number) => {
+    try {
+      setIsPurchasing(true);
+      await writePurchase({
+        address: CONTRACT_ADDRESSES.LAYERED_OPTIONS_TRADING,
+        abi: LAYERED_OPTIONS_ABI,
+        functionName: "purchaseOption",
+        args: [BigInt(tokenId)],
+      });
+    } catch (error) {
+      setIsPurchasing(false);
+      throw error;
+    }
+  };
+
   // Add supported asset (admin function)
   const addSupportedAsset = async (assetAddress: string) => {
     await writeAddAsset({
@@ -188,6 +209,7 @@ export function useLayeredOptions() {
   // Reset loading states when transactions complete
   if (isCreateSuccess) setIsCreating(false);
   if (isChildSuccess) setIsCreatingChild(false);
+  if (isPurchaseSuccess) setIsPurchasing(false);
   if (isExerciseSuccess) setIsExercising(false);
   if (isTransferSuccess) setIsTransferring(false);
 
@@ -195,6 +217,7 @@ export function useLayeredOptions() {
     // Functions
     createLayeredOption,
     createChildOption,
+    purchaseOption,
     exerciseOption,
     transferOption,
     addSupportedAsset,
@@ -202,12 +225,14 @@ export function useLayeredOptions() {
     // States
     isCreating: isCreating || isCreatePending,
     isCreatingChild: isCreatingChild || isChildPending,
+    isPurchasing: isPurchasing || isPurchasePending,
     isExercising: isExercising || isExercisePending,
     isTransferring: isTransferring || isTransferPending,
 
     // Transaction hashes
     createHash,
     createChildHash,
+    purchaseHash,
     exerciseHash,
     transferHash,
     addAssetHash,
@@ -215,6 +240,7 @@ export function useLayeredOptions() {
     // Success states
     isCreateSuccess,
     isChildSuccess,
+    isPurchaseSuccess,
     isExerciseSuccess,
     isTransferSuccess,
 

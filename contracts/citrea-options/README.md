@@ -1,8 +1,29 @@
 # 🎯 Citrea European-Style Layered Options Protocol
 
-**A revolutionary decentralized European-style options trading platform with layered tokenization for maximum capital efficiency**
+**A revolutionary decentralized European-style options trading platform with layered tokenization and automatic child maturity inheritance for maximum capital efficiency**
 
-Built on Citrea testnet, this protocol enables users to create, trade, and settle Bitcoin/Ethereum options at maturity while dramatically increasing capital utilization through innovative layered option structures.
+Built on Citrea testnet, this protocol enables users to create, trade, and settle Bitcoin/Ethereum options at maturity while dramatically increasing capital utilization through innovative layered option structures where **child options automatically inherit their parent's maturity**.
+
+## 🆕 **NEW FEATURE: Automatic Child Maturity Inheritance**
+
+**🔥 Child options now automatically inherit their parent's maturity - no more complex maturity management!**
+
+- ✅ **Simplified API**: `createChildOption(parentId, newStrike)` - only 2 parameters needed
+- ✅ **Automatic Inheritance**: Child options settle at exactly the same time as their parent  
+- ✅ **Reduced Complexity**: No more worrying about maturity mismatches in option chains
+- ✅ **European Settlement**: All options in a chain settle simultaneously at maturity
+
+### **Before vs After Child Option Creation**
+
+**❌ Old Way (Complex):**
+```javascript
+createChildOption(parentTokenId, newStrike, newMaturity) // 3 parameters, manual maturity management
+```
+
+**✅ New Way (Simple):**
+```javascript
+createChildOption(parentTokenId, newStrike) // 2 parameters, automatic maturity inheritance!
+```
 
 ---
 
