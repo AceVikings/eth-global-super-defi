@@ -1,13 +1,13 @@
-// Contract addresses on Citrea testnet - Updated with new deployment (Sept 28, 2025)
+// Contract addresses on Citrea testnet - Updated with FIXED SETTLEMENT deployment (Sept 28, 2025)
 export const CONTRACT_ADDRESSES = {
   LAYERED_OPTIONS_TRADING:
-    "0x0180e63fce09229108e9cf26a51e304ce520847a" as `0x${string}`,
-  TIME_ORACLE: "0xce9ba295ce52b0a55e44ff3acafbc0e272dbd3f0" as `0x${string}`,
-  MOCK_WBTC: "0x8daa9f780e2e8a86da59d4eec67f1368d672ff58" as `0x${string}`,
-  MOCK_WETH: "0x6a16acdbede8627f670263eb1c2c61dea912414e" as `0x${string}`,
-  STABLECOIN: "0x18e06367f3a55cc1fb4a084480f162422b998f99" as `0x${string}`,
-  BTC_PRICE_FEED: "0xf6c5002f5b13bd20425167817a033448539466cd" as `0x${string}`,
-  ETH_PRICE_FEED: "0x205d6a03dade4a45aa595c465926d248db70ca3d" as `0x${string}`,
+    "0x711e3478ed87ed7551d0d80c0273465319a5d7a7" as `0x${string}`,
+  TIME_ORACLE: "0xce34b7ebb976b6a4dca43597850b17560d40a577" as `0x${string}`,
+  MOCK_WBTC: "0xce311c5cbe26263fa0208d4f5923ba5ef06f8eac" as `0x${string}`,
+  MOCK_WETH: "0xfe69aaf32ac992913a2ad4c1daffaf23b1f7f588" as `0x${string}`,
+  STABLECOIN: "0xd42eb748558f423f3ea5fe587149477fc3c558d3" as `0x${string}`,
+  BTC_PRICE_FEED: "0x2091288042d849d66b4e24b1c3bb6b59b51dd6eb" as `0x${string}`,
+  ETH_PRICE_FEED: "0x457098140c5e83f28a31fb676cf8c00c8c4a9033" as `0x${string}`,
 } as const;
 
 // Layered Options Trading ABI (updated with call/put support)
@@ -54,9 +54,16 @@ export const LAYERED_OPTIONS_ABI = [
   },
   {
     inputs: [{ name: "tokenId", type: "uint256" }],
-    name: "exerciseOption",
+    name: "settleOption",
     outputs: [],
     stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    name: "isOptionMatured",
+    outputs: [{ name: "", type: "bool" }],
+    stateMutability: "view",
     type: "function",
   },
   {
@@ -108,6 +115,68 @@ export const LAYERED_OPTIONS_ABI = [
     inputs: [],
     name: "nextTokenId",
     outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      { name: "operator", type: "address" },
+      { name: "approved", type: "bool" }
+    ],
+    name: "setApprovalForAll",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { name: "parentTokenId", type: "uint256" },
+      { name: "finalPrice", type: "uint256" }
+    ],
+    name: "calculateParentProfit",
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      { name: "childTokenId", type: "uint256" },
+      { name: "finalPrice", type: "uint256" }
+    ],
+    name: "calculateChildProfit",
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ name: "parentTokenId", type: "uint256" }],
+    name: "settleOptionTree",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    name: "claimSettlement",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ name: "parentTokenId", type: "uint256" }],
+    name: "getOptionChildren",
+    outputs: [{ name: "", type: "uint256[]" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    name: "settlements",
+    outputs: [
+      { name: "maturityPrice", type: "uint256" },
+      { name: "priceSet", type: "bool" },
+      { name: "totalPayout", type: "uint256" }
+    ],
     stateMutability: "view",
     type: "function",
   },

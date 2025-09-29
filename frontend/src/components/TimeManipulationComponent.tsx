@@ -4,13 +4,6 @@ import { CONTRACT_ADDRESSES } from "../contracts/config";
 
 const TIME_ORACLE_ABI = [
   {
-    inputs: [{ name: "_currentTime", type: "uint256" }],
-    name: "setCurrentTime",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
     inputs: [],
     name: "getCurrentTime",
     outputs: [{ name: "", type: "uint256" }],
@@ -18,10 +11,42 @@ const TIME_ORACLE_ABI = [
     type: "function",
   },
   {
-    inputs: [{ name: "_seconds", type: "uint256" }],
-    name: "increaseTime",
+    inputs: [{ name: "_offset", type: "int256" }],
+    name: "setTimeOffset",
+    outputs: [],
+    stateMutability: "nonpayable", 
+    type: "function",
+  },
+  {
+    inputs: [{ name: "_timestamp", type: "uint256" }],
+    name: "setAbsoluteTime",
     outputs: [],
     stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ name: "_duration", type: "uint256" }],
+    name: "fastForward",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "useBlockTime",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "getTimeConfig",
+    outputs: [
+      { name: "usingRealTime", type: "bool" },
+      { name: "offset", type: "uint256" },
+      { name: "currentTime", type: "uint256" }
+    ],
+    stateMutability: "view",
     type: "function",
   },
 ] as const;
@@ -39,6 +64,11 @@ export const TimeManipulationComponent: React.FC<
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [timeConfig, setTimeConfig] = useState<{
+    usingRealTime: boolean;
+    offset: string;
+    currentTime: string;
+  } | null>(null);
 
   const { address, isConnected } = useAccount();
   const publicClient = usePublicClient();
@@ -58,6 +88,19 @@ export const TimeManipulationComponent: React.FC<
       const timestamp = Number(result);
       const date = new Date(timestamp * 1000);
       setCurrentOracleTime(date.toLocaleString());
+
+      // Also load time configuration
+      const config = await publicClient.readContract({
+        address: CONTRACT_ADDRESSES.TIME_ORACLE,
+        abi: TIME_ORACLE_ABI,
+        functionName: "getTimeConfig",
+      });
+
+      setTimeConfig({
+        usingRealTime: config[0],
+        offset: String(config[1]),
+        currentTime: new Date(Number(config[2]) * 1000).toLocaleString(),
+      });
     } catch (err: any) {
       console.error("Error loading current time:", err);
       setCurrentOracleTime("Error loading time");
@@ -96,7 +139,7 @@ export const TimeManipulationComponent: React.FC<
       const hash = await walletClient.writeContract({
         address: CONTRACT_ADDRESSES.TIME_ORACLE,
         abi: TIME_ORACLE_ABI,
-        functionName: "setCurrentTime",
+        functionName: "setAbsoluteTime",
         args: [BigInt(timestamp)],
       });
 
@@ -136,7 +179,7 @@ export const TimeManipulationComponent: React.FC<
       const hash = await walletClient.writeContract({
         address: CONTRACT_ADDRESSES.TIME_ORACLE,
         abi: TIME_ORACLE_ABI,
-        functionName: "increaseTime",
+        functionName: "fastForward",
         args: [BigInt(seconds)],
       });
 
@@ -158,6 +201,43 @@ export const TimeManipulationComponent: React.FC<
     } catch (err: any) {
       console.error("Error increasing oracle time:", err);
       setError(err.message || "Failed to increase oracle time");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetToRealTime = async () => {
+    if (!walletClient || !address || !isConnected) {
+      setError("Please connect your wallet");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const hash = await walletClient.writeContract({
+        address: CONTRACT_ADDRESSES.TIME_ORACLE,
+        abi: TIME_ORACLE_ABI,
+        functionName: "useBlockTime",
+        args: [],
+      });
+
+      console.log("Reset to real time transaction:", hash);
+
+      // Wait for transaction confirmation
+      if (publicClient) {
+        await publicClient.waitForTransactionReceipt({ hash });
+      }
+
+      setSuccess("Oracle reset to real blockchain time successfully!");
+
+      // Refresh current time
+      setTimeout(loadCurrentTime, 2000);
+    } catch (err: any) {
+      console.error("Error resetting oracle time:", err);
+      setError(err.message || "Failed to reset oracle time");
     } finally {
       setLoading(false);
     }
@@ -222,6 +302,20 @@ export const TimeManipulationComponent: React.FC<
             >
               REAL TIME: {new Date().toLocaleString()}
             </div>
+            {timeConfig && (
+              <div
+                className="text-xs font-mono mt-1"
+                style={{
+                  color: timeConfig.usingRealTime
+                    ? "var(--retro-green)"
+                    : "var(--retro-amber)",
+                }}
+              >
+                {timeConfig.usingRealTime
+                  ? "USING REAL BLOCKCHAIN TIME"
+                  : `TIME OFFSET ACTIVE (${timeConfig.offset}s)`}
+              </div>
+            )}
           </div>
 
           {/* Set Specific DateTime */}
@@ -297,6 +391,17 @@ export const TimeManipulationComponent: React.FC<
               Quick Time Actions
             </label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              <button
+                onClick={resetToRealTime}
+                disabled={loading || !isConnected}
+                className={
+                  loading || !isConnected
+                    ? "retro-button-primary px-3 py-2 font-mono text-xs opacity-50 cursor-not-allowed"
+                    : "retro-button-primary px-3 py-2 font-mono text-xs"
+                }
+              >
+                RESET TO REAL TIME
+              </button>
               <button
                 onClick={() => {
                   const now = Math.floor(Date.now() / 1000);

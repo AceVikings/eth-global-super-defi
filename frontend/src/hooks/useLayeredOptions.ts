@@ -37,6 +37,8 @@ export function useLayeredOptions() {
   const [isExercising, setIsExercising] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
+  const [isSettling, setIsSettling] = useState(false);
+  const [isClaiming, setIsClaiming] = useState(false);
 
   // Write contract hooks
   const { writeContract: writeCreateOption, data: createHash } =
@@ -51,6 +53,10 @@ export function useLayeredOptions() {
     useWriteContract();
   const { writeContract: writeApprove } = useWriteContract();
   const { writeContract: writeAddAsset, data: addAssetHash } =
+    useWriteContract();
+  const { writeContract: writeSettle, data: settleHash } =
+    useWriteContract();
+  const { writeContract: writeClaim, data: claimHash } =
     useWriteContract();
 
   // Wait for transaction confirmations
@@ -136,6 +142,26 @@ export function useLayeredOptions() {
   const createChildOption = async (params: CreateChildOptionParams) => {
     try {
       setIsCreatingChild(true);
+      
+      // Check if parent options contract is approved for all tokens
+      setIsApproving(true);
+      
+      // For ERC1155 (parent option tokens), we need to use setApprovalForAll
+      // The parent option tokens are minted by the LayeredOptionsTrading contract itself
+      await writeApprove({
+        address: CONTRACT_ADDRESSES.LAYERED_OPTIONS_TRADING,
+        abi: LAYERED_OPTIONS_ABI,
+        functionName: "setApprovalForAll",
+        args: [
+          CONTRACT_ADDRESSES.LAYERED_OPTIONS_TRADING, // operator (the contract itself)
+          true // approved
+        ]
+      });
+      
+      // Wait a moment for approval to complete
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      setIsApproving(false);
+      
       const strikePrice = parseUnits(params.strikePrice, 18);
       // No expiration time needed - child inherits parent maturity
       // No option type needed - child inherits parent option type
@@ -152,18 +178,19 @@ export function useLayeredOptions() {
       });
     } catch (error) {
       setIsCreatingChild(false);
+      setIsApproving(false);
       throw error;
     }
   };
 
-  // Exercise an option
+  // Exercise an option (now uses settlement system with maturity check)
   const exerciseOption = async (tokenId: number) => {
     try {
       setIsExercising(true);
       await writeExercise({
         address: CONTRACT_ADDRESSES.LAYERED_OPTIONS_TRADING,
         abi: LAYERED_OPTIONS_ABI,
-        functionName: "exerciseOption",
+        functionName: "settleOption",
         args: [BigInt(tokenId)],
       });
     } catch (error) {
@@ -238,6 +265,37 @@ export function useLayeredOptions() {
     });
   };
 
+  // Settlement functions
+  const settleOptionTree = async (parentTokenId: number) => {
+    try {
+      setIsSettling(true);
+      await writeSettle({
+        address: CONTRACT_ADDRESSES.LAYERED_OPTIONS_TRADING,
+        abi: LAYERED_OPTIONS_ABI,
+        functionName: "settleOptionTree",
+        args: [BigInt(parentTokenId)],
+      });
+    } catch (error) {
+      setIsSettling(false);
+      throw error;
+    }
+  };
+
+  const claimSettlement = async (tokenId: number) => {
+    try {
+      setIsClaiming(true);
+      await writeClaim({
+        address: CONTRACT_ADDRESSES.LAYERED_OPTIONS_TRADING,
+        abi: LAYERED_OPTIONS_ABI,
+        functionName: "claimSettlement",
+        args: [BigInt(tokenId)],
+      });
+    } catch (error) {
+      setIsClaiming(false);
+      throw error;
+    }
+  };
+
   // Reset loading states when transactions complete
   if (isCreateSuccess) setIsCreating(false);
   if (isChildSuccess) setIsCreatingChild(false);
@@ -253,6 +311,8 @@ export function useLayeredOptions() {
     exerciseOption,
     transferOption,
     addSupportedAsset,
+    settleOptionTree,
+    claimSettlement,
 
     // States
     isCreating: isCreating || isCreatePending,
@@ -261,6 +321,8 @@ export function useLayeredOptions() {
     isExercising: isExercising || isExercisePending,
     isTransferring: isTransferring || isTransferPending,
     isApproving, // Add approval state
+    isSettling,
+    isClaiming,
 
     // Transaction hashes
     createHash,
@@ -269,6 +331,8 @@ export function useLayeredOptions() {
     exerciseHash,
     transferHash,
     addAssetHash,
+    settleHash,
+    claimHash,
 
     // Success states
     isCreateSuccess,
@@ -346,6 +410,24 @@ export function useUserOptionBalance(userAddress?: string, tokenId?: number) {
   return {
     balance: balance ? Number(balance) : 0,
     hasOption: balance ? Number(balance) > 0 : false,
+  };
+}
+
+// Hook to check if an option has matured (can be exercised/settled)
+export function useOptionMaturity(tokenId?: number) {
+  const { data: isMatured } = useReadContract({
+    address: CONTRACT_ADDRESSES.LAYERED_OPTIONS_TRADING,
+    abi: LAYERED_OPTIONS_ABI,
+    functionName: "isOptionMatured",
+    args: tokenId ? [BigInt(tokenId)] : undefined,
+    query: {
+      enabled: !!tokenId,
+    },
+  });
+
+  return {
+    isMatured: !!isMatured,
+    canExercise: !!isMatured,
   };
 }
 

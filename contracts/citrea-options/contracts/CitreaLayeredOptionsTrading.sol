@@ -28,6 +28,9 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
         OptionType optionType;
         address premiumToken; // Stablecoin for premium payments
         bool isSettled; // Changed from isExercised to isSettled
+        // Settlement tracking fields
+        uint256 collateralAmount; // Amount of base asset backing this option
+        address collateralProvider; // Who provided the original collateral
     }
 
     // Settlement tracking
@@ -42,6 +45,7 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
     mapping(uint256 => SettlementData) public settlements; // Track settlement data
     mapping(address => bool) public supportedAssets;
     mapping(uint256 => address) public optionWriters; // Track who wrote each option
+    mapping(uint256 => uint256[]) public childOptions; // Track child options for each parent
     address public stablecoin; // Stablecoin address for child option premiums
     uint256 private nextTokenId = 1;
 
@@ -101,7 +105,11 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
     constructor(
         address initialOwner,
         address _stablecoin,
-        address _timeOracle
+        address _timeOracle,
+        address _wbtc,
+        address _weth,
+        address _btcPriceFeed,
+        address _ethPriceFeed
     )
         ERC1155("https://metadata.citreaoptions.com/{id}")
         Ownable(initialOwner)
@@ -109,8 +117,19 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
     {
         require(_stablecoin != address(0), "Invalid stablecoin address");
         require(_timeOracle != address(0), "Invalid time oracle address");
+        require(_wbtc != address(0), "Invalid WBTC address");
+        require(_weth != address(0), "Invalid WETH address");
+        require(_btcPriceFeed != address(0), "Invalid BTC price feed address");
+        require(_ethPriceFeed != address(0), "Invalid ETH price feed address");
+        
         stablecoin = _stablecoin;
         timeOracle = TimeOracle(_timeOracle);
+        
+        // Preconfigure supported assets with their price feeds
+        supportedAssets[_wbtc] = true;
+        supportedAssets[_weth] = true;
+        priceFeeds[_wbtc] = MockPriceFeed(_btcPriceFeed);
+        priceFeeds[_weth] = MockPriceFeed(_ethPriceFeed);
     }
 
     /**
@@ -164,7 +183,9 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
             parentTokenId: parentTokenId,
             optionType: optionType,
             premiumToken: stablecoin, // Always use stablecoin for premiums
-            isSettled: false // Changed from isExercised
+            isSettled: false, // Changed from isExercised
+            collateralAmount: collateralRequired, // Store collateral amount
+            collateralProvider: msg.sender // Store who provided collateral
         });
 
         _mint(msg.sender, tokenId, 1, "");
@@ -291,20 +312,50 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
         // Mark as settled
         option.isSettled = true;
         
-        uint256 payout = settlements[tokenId].totalPayout;
+        // Calculate the profit (intrinsic value)
+        uint256 profit = settlements[tokenId].totalPayout;
         
-        // Burn the option token
+        // For European options, handle collateral return properly:
+        // 1. If the current holder is the original writer, they get their full collateral back
+        // 2. If the current holder is a buyer, they get the profit and writer gets remaining collateral
+        
+        address currentHolder = msg.sender;
+        address originalWriter = option.collateralProvider;
+        uint256 totalCollateral = option.collateralAmount;
+        
+        // Burn the option token first
         _burn(msg.sender, tokenId, 1);
 
-        // Transfer payout if any
-        if (payout > 0) {
+        if (currentHolder == originalWriter) {
+            // Case 1: Original writer settling their own unsold option
+            // They get all their collateral back (profit is 0 since they can't owe themselves)
             require(
-                IERC20(option.baseAsset).transfer(msg.sender, payout),
-                "Payout transfer failed"
+                IERC20(option.baseAsset).transfer(currentHolder, totalCollateral),
+                "Collateral return failed"
             );
+            
+            emit OptionSettled(tokenId, msg.sender, settlements[tokenId].maturityPrice, totalCollateral);
+        } else {
+            // Case 2: A buyer settling a purchased option
+            // Buyer gets profit, original writer should get remaining collateral
+            if (profit > 0) {
+                require(
+                    IERC20(option.baseAsset).transfer(currentHolder, profit),
+                    "Profit payout failed"
+                );
+            }
+            
+            // Return remaining collateral to original writer
+            uint256 remainingCollateral = totalCollateral > profit ? totalCollateral - profit : 0;
+            if (remainingCollateral > 0) {
+                require(
+                    IERC20(option.baseAsset).transfer(originalWriter, remainingCollateral),
+                    "Collateral return to writer failed"
+                );
+            }
+            
+            emit OptionSettled(tokenId, msg.sender, settlements[tokenId].maturityPrice, profit);
         }
-
-        emit OptionSettled(tokenId, msg.sender, settlements[tokenId].maturityPrice, payout);
     }
 
     /**
@@ -362,7 +413,7 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
      * @dev Create child option from parent with automatic validation and premium calculation
      * Child of CALL can only be CALL at higher strike, child of PUT can only be PUT at lower strike
      * Child options always inherit the same maturity as their parent
-     * Premium is always paid in stablecoin
+     * Requires 1 parent token as collateral - parent token is burned to create child option
      */
     function createChildOption(
         uint256 parentTokenId,
@@ -398,15 +449,15 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
             parent.optionType
         );
 
-        // Premium is always paid in stablecoin for child options
+        // Transfer parent tokens from user to contract
+        // Amount equals the wei amount of underlying collateral (1 token = 1e18 wei)
         require(
-            IERC20(stablecoin).transferFrom(
-                msg.sender,
-                address(this),
-                childPremium
-            ),
-            "Stablecoin premium payment failed"
+            IERC1155(address(this)).balanceOf(msg.sender, parentTokenId) >= 1,
+            "Insufficient parent tokens"
         );
+        
+        // Burn 1 parent token from user as collateral for child option
+        _burn(msg.sender, parentTokenId, 1);
 
         uint256 childTokenId = nextTokenId++;
 
@@ -418,8 +469,13 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
             parentTokenId: parentTokenId,
             optionType: parent.optionType, // Same type as parent
             premiumToken: stablecoin, // Always stablecoin for children
-            isSettled: false // Changed from isExercised
+            isSettled: false, // Changed from isExercised
+            collateralAmount: parent.collateralAmount, // Inherit parent's collateral amount
+            collateralProvider: parent.collateralProvider // Inherit original collateral provider
         });
+
+        // Track the child option under its parent
+        childOptions[parentTokenId].push(childTokenId);
 
         _mint(msg.sender, childTokenId, 1, "");
 
@@ -598,11 +654,178 @@ contract CitreaLayeredOptionsTrading is ERC1155, Ownable, ReentrancyGuard {
      */
     function getOptionChildren(
         uint256 parentTokenId
-    ) external pure returns (uint256[] memory) {
-        // Simplified implementation - in production, would maintain child mappings
-        uint256[] memory children = new uint256[](1);
-        children[0] = parentTokenId + 1; // Demo implementation
-        return children;
+    ) external view returns (uint256[] memory) {
+        return childOptions[parentTokenId];
+    }
+
+    /**
+     * @dev Calculate capped profit for parent option holder
+     * Parent profit is capped by the closest child strike price
+     */
+    function calculateParentProfit(
+        uint256 parentTokenId,
+        uint256 finalPrice
+    ) public view returns (uint256) {
+        LayeredOption memory parent = options[parentTokenId];
+        require(parent.baseAsset != address(0), "Option does not exist");
+
+        uint256[] memory children = childOptions[parentTokenId];
+        
+        // Calculate uncapped parent profit
+        uint256 uncappedProfit = 0;
+        if (parent.optionType == OptionType.CALL && finalPrice > parent.strikePrice) {
+            uncappedProfit = finalPrice - parent.strikePrice;
+        } else if (parent.optionType == OptionType.PUT && parent.strikePrice > finalPrice) {
+            uncappedProfit = parent.strikePrice - finalPrice;
+        }
+
+        if (children.length == 0) {
+            // No children, parent gets full profit
+            return uncappedProfit;
+        }
+
+        // Find the cap based on closest child strike
+        uint256 cap = type(uint256).max;
+        for (uint256 i = 0; i < children.length; i++) {
+            LayeredOption memory child = options[children[i]];
+            uint256 childCap;
+            
+            if (parent.optionType == OptionType.CALL) {
+                // For CALLs, cap is the difference to the lowest child strike
+                childCap = child.strikePrice - parent.strikePrice;
+            } else {
+                // For PUTs, cap is the difference to the highest child strike  
+                childCap = parent.strikePrice - child.strikePrice;
+            }
+            
+            if (childCap < cap) {
+                cap = childCap;
+            }
+        }
+
+        // Return the minimum of uncapped profit and cap
+        return uncappedProfit < cap ? uncappedProfit : cap;
+    }
+
+    /**
+     * @dev Calculate uncapped profit for child option holder
+     */
+    function calculateChildProfit(
+        uint256 childTokenId,
+        uint256 finalPrice
+    ) public view returns (uint256) {
+        LayeredOption memory child = options[childTokenId];
+        require(child.baseAsset != address(0), "Option does not exist");
+        require(child.parentTokenId != 0, "Not a child option");
+
+        // Child options get uncapped profit beyond their strike
+        if (child.optionType == OptionType.CALL && finalPrice > child.strikePrice) {
+            return finalPrice - child.strikePrice;
+        } else if (child.optionType == OptionType.PUT && child.strikePrice > finalPrice) {
+            return child.strikePrice - finalPrice;
+        }
+
+        return 0;
+    }
+
+    /**
+     * @dev Settle a parent option and all its children atomically at maturity
+     * Can only be called after maturity time has passed
+     */
+    function settleOptionTree(uint256 parentTokenId) external nonReentrant {
+        LayeredOption memory parent = options[parentTokenId];
+        require(parent.baseAsset != address(0), "Option does not exist");
+        require(parent.parentTokenId == 0, "Must be parent option");
+        require(getCurrentTime() >= parent.maturity, "Not yet matured");
+        require(!parent.isSettled, "Already settled");
+        
+        // Get final price from oracle
+        MockPriceFeed priceFeed = priceFeeds[parent.baseAsset];
+        require(address(priceFeed) != address(0), "Price feed not set");
+        
+        (, int256 priceInt, , , ) = priceFeed.latestRoundData();
+        require(priceInt > 0, "Invalid price");
+        uint256 finalPrice = uint256(priceInt);
+        
+        // Calculate profits for parent and all children
+        uint256 parentProfit = calculateParentProfit(parentTokenId, finalPrice);
+        uint256[] memory children = childOptions[parentTokenId];
+        uint256 totalChildProfit = 0;
+        
+        for (uint256 i = 0; i < children.length; i++) {
+            totalChildProfit += calculateChildProfit(children[i], finalPrice);
+        }
+        
+        uint256 totalProfitClaims = parentProfit + totalChildProfit;
+        uint256 availableCollateral = parent.collateralAmount;
+        
+        // Store settlement data
+        settlements[parentTokenId] = SettlementData({
+            maturityPrice: finalPrice,
+            priceSet: true,
+            totalPayout: totalProfitClaims > availableCollateral ? availableCollateral : totalProfitClaims
+        });
+        
+        // Mark parent and all children as settled
+        options[parentTokenId].isSettled = true;
+        for (uint256 i = 0; i < children.length; i++) {
+            options[children[i]].isSettled = true;
+        }
+        
+        emit OptionSettled(parentTokenId, msg.sender, finalPrice, settlements[parentTokenId].totalPayout);
+    }
+
+    /**
+     * @dev Claim settlement payout for an option holder
+     * Can be called by holders of parent or child options after settlement
+     */
+    function claimSettlement(uint256 tokenId) external nonReentrant {
+        require(balanceOf(msg.sender, tokenId) > 0, "Not option holder");
+        LayeredOption memory option = options[tokenId];
+        require(option.isSettled, "Option not settled");
+        
+        // Find the root parent option to get settlement data
+        uint256 parentTokenId = option.parentTokenId == 0 ? tokenId : option.parentTokenId;
+        SettlementData memory settlement = settlements[parentTokenId];
+        require(settlement.priceSet, "Settlement not available");
+        
+        // Calculate this option's profit share
+        uint256 optionProfit;
+        if (option.parentTokenId == 0) {
+            // This is a parent option
+            optionProfit = calculateParentProfit(tokenId, settlement.maturityPrice);
+        } else {
+            // This is a child option
+            optionProfit = calculateChildProfit(tokenId, settlement.maturityPrice);
+        }
+        
+        if (optionProfit == 0) {
+            revert("No profit to claim");
+        }
+        
+        // Calculate proportional payout
+        LayeredOption memory parentOption = options[parentTokenId];
+        uint256[] memory children = childOptions[parentTokenId];
+        uint256 totalParentProfit = calculateParentProfit(parentTokenId, settlement.maturityPrice);
+        uint256 totalChildProfit = 0;
+        
+        for (uint256 i = 0; i < children.length; i++) {
+            totalChildProfit += calculateChildProfit(children[i], settlement.maturityPrice);
+        }
+        
+        uint256 totalProfitClaims = totalParentProfit + totalChildProfit;
+        uint256 proportionalPayout = (optionProfit * settlement.totalPayout) / totalProfitClaims;
+        
+        // Transfer collateral to option holder
+        require(
+            IERC20(parentOption.baseAsset).transfer(msg.sender, proportionalPayout),
+            "Payout transfer failed"
+        );
+        
+        // Mark option as claimed (burn the token)
+        _burn(msg.sender, tokenId, 1);
+        
+        emit OptionSettled(tokenId, msg.sender, settlement.maturityPrice, proportionalPayout);
     }
 
     /**

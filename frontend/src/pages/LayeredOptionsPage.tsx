@@ -5,6 +5,7 @@ import {
   useLayeredOptions,
   useOptionDetails,
   useUserOptionBalance,
+  useOptionMaturity,
   useTokenOperations,
   type CreateOptionParams,
   type CreateChildOptionParams,
@@ -22,7 +23,7 @@ import { usePremiumCalculator } from "../hooks/usePremiumCalculator";
 const LayeredOptionsPage = () => {
   const { address, isConnected } = useAccount();
   const [selectedTab, setSelectedTab] = useState<
-    "create" | "purchase" | "manage" | "exercise" | "browse" | "demo"
+    "create" | "purchase" | "manage" | "exercise" | "browse" | "demo" | "settle"
   >("create");
   const [selectedTokenId, setSelectedTokenId] = useState<number>(1);
   const [viewTokenId, setViewTokenId] = useState<number>(1);
@@ -61,17 +62,23 @@ const LayeredOptionsPage = () => {
     exerciseOption,
     transferOption,
     addSupportedAsset,
+    settleOptionTree,
+    claimSettlement,
     isCreating,
     isCreatingChild,
     isPurchasing,
     isExercising,
     isTransferring,
     isApproving,
+    isSettling,
+    isClaiming,
     nextTokenId,
     createHash,
     createChildHash,
     exerciseHash,
     transferHash,
+    settleHash,
+    claimHash,
   } = useLayeredOptions();
 
   // API hooks for indexed data
@@ -106,6 +113,7 @@ const LayeredOptionsPage = () => {
     address,
     selectedTokenId
   );
+  const { canExercise } = useOptionMaturity(selectedTokenId);
   const { mintTestTokens } = useTokenOperations();
 
   // Premium calculation hook
@@ -245,7 +253,7 @@ const LayeredOptionsPage = () => {
     try {
       await exerciseOption(selectedTokenId);
     } catch (error) {
-      console.error("Failed to exercise option:", error);
+      console.error("Failed to settle option:", error);
     }
   };
 
@@ -695,6 +703,56 @@ const LayeredOptionsPage = () => {
                       </p>
                     </div>
 
+                    {/* Parent Option Details */}
+                    <div className="terminal-window">
+                      <div className="terminal-title">
+                        PARENT OPTION STATUS
+                      </div>
+                      <div className="p-4 space-y-2">
+                        <div className="flex justify-between">
+                          <span style={{ color: "var(--retro-off-white)" }}>
+                            STATUS:
+                          </span>
+                          <span style={{ color: parentOptionDetails ? "var(--retro-green)" : "var(--retro-red)" }}>
+                            {parentOptionDetails ? "FOUND" : "NOT FOUND"}
+                          </span>
+                        </div>
+                        {parentOptionDetails && (
+                          <>
+                            <div className="flex justify-between">
+                              <span style={{ color: "var(--retro-off-white)" }}>
+                                TYPE:
+                              </span>
+                              <span style={{ color: "var(--retro-green)" }}>
+                                {(() => {
+                                  const assetAddr = parentOptionDetails.baseAsset.toLowerCase();
+                                  if (assetAddr === CONTRACT_ADDRESSES.MOCK_WBTC.toLowerCase()) return "WBTC";
+                                  if (assetAddr === CONTRACT_ADDRESSES.MOCK_WETH.toLowerCase()) return "WETH";
+                                  return "UNKNOWN";
+                                })()} {parentOptionDetails.optionType === 0 ? "CALL" : "PUT"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span style={{ color: "var(--retro-off-white)" }}>
+                                STRIKE:
+                              </span>
+                              <span style={{ color: "var(--retro-green)" }}>
+                                ${(Number(parentOptionDetails.strikePrice) / 1e18).toFixed(0)} USDC
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span style={{ color: "var(--retro-off-white)" }}>
+                                MATURITY:
+                              </span>
+                              <span style={{ color: "var(--retro-green)" }}>
+                                {parentExpirationDate ? parentExpirationDate.toLocaleDateString() : "N/A"}
+                              </span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
                     <div>
                       <label
                         className="block text-sm font-mono mb-2 uppercase tracking-wide"
@@ -779,10 +837,10 @@ const LayeredOptionsPage = () => {
 
                     <button
                       type="submit"
-                      disabled={!isConnected || isCreatingChild}
+                      disabled={!isConnected || isCreatingChild || isApproving}
                       className="retro-button-primary w-full py-3 px-6 font-mono"
                     >
-                      {isCreatingChild ? "CREATING..." : "CREATE CHILD OPTION"}
+                      {isApproving ? "APPROVING PARENT TOKEN..." : isCreatingChild ? "CREATING..." : "CREATE CHILD OPTION"}
                     </button>
 
                     {createChildHash && (
@@ -1186,7 +1244,7 @@ const LayeredOptionsPage = () => {
                   className="text-2xl font-mono font-bold mb-4 uppercase tracking-wider"
                   style={{ color: "var(--retro-green)" }}
                 >
-                  [EXERCISE OPTION]
+                  [SETTLE OPTION] (European Style - Only After Maturity)
                 </h3>
                 <div className="space-y-4">
                   <div>
@@ -1194,7 +1252,7 @@ const LayeredOptionsPage = () => {
                       className="block text-sm font-mono mb-2 uppercase tracking-wide"
                       style={{ color: "var(--retro-amber)" }}
                     >
-                      Option ID to Exercise
+                      Option ID to Settle
                     </label>
                     <input
                       type="number"
@@ -1224,14 +1282,54 @@ const LayeredOptionsPage = () => {
                         ? "[OK] YOU OWN THIS OPTION"
                         : "[ERROR] YOU DON'T OWN THIS OPTION"}
                     </p>
+                    
+                    <div className="mt-3 pt-3 border-t border-retro-green/20">
+                      <p
+                        className="font-mono text-sm mb-2 uppercase"
+                        style={{ color: "var(--retro-amber)" }}
+                      >
+                        Option Maturity Status:
+                      </p>
+                      <p
+                        className={`text-lg font-mono ${
+                          canExercise ? "text-retro-green" : "text-retro-red"
+                        }`}
+                      >
+                        {canExercise
+                          ? "[OK] OPTION HAS MATURED - CAN SETTLE"
+                          : "[WAIT] OPTION NOT YET MATURED - EUROPEAN STYLE"}
+                      </p>
+                    </div>
+
+                    {canExercise && (
+                      <div className="mt-3 pt-3 border-t border-retro-amber/20">
+                        <p
+                          className="font-mono text-sm mb-2 uppercase"
+                          style={{ color: "var(--retro-amber)" }}
+                        >
+                          Settlement Payout Information:
+                        </p>
+                        <div className="text-sm font-mono space-y-1">
+                          <p className="text-retro-green">
+                            ✓ If you're the original writer: Get your full collateral back
+                          </p>
+                          <p className="text-retro-green">
+                            ✓ If you purchased this option: Get profit + writer gets remaining collateral
+                          </p>
+                          <p className="text-retro-blue">
+                            ℹ European-style: Settlement processes all payouts automatically
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <button
                     onClick={handleExerciseOption}
-                    disabled={!isConnected || isExercising || !hasOption}
+                    disabled={!isConnected || isExercising || !hasOption || !canExercise}
                     className="retro-button-primary w-full py-3 px-6 font-mono"
                   >
-                    {isExercising ? "EXERCISING..." : "EXECUTE OPTION"}
+                    {isExercising ? "SETTLING..." : canExercise ? "SETTLE OPTION" : "NOT YET MATURED"}
                   </button>
                   {exerciseHash && (
                     <div className="terminal-window p-4">
@@ -1239,7 +1337,7 @@ const LayeredOptionsPage = () => {
                         className="font-mono text-sm mb-1"
                         style={{ color: "var(--retro-green)" }}
                       >
-                        [SUCCESS] OPTION EXERCISED
+                        [SUCCESS] OPTION SETTLED
                       </p>
                       <p
                         className="text-xs font-mono break-all"
@@ -1655,6 +1753,146 @@ const LayeredOptionsPage = () => {
                   )}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Settlement Tab */}
+          {selectedTab === "settle" && (
+            <div className="space-y-8">
+              <div className="terminal-panel">
+                <h3
+                  className="text-2xl font-mono font-bold mb-4 uppercase tracking-wider"
+                  style={{ color: "var(--retro-green)" }}
+                >
+                  [SETTLEMENT & CLAIM]
+                </h3>
+                <p
+                  className="font-mono mb-6"
+                  style={{ color: "var(--retro-amber)" }}
+                >
+                  → SETTLE MATURED OPTIONS AND CLAIM PAYOUTS
+                </p>
+
+                <div className="grid md:grid-cols-2 gap-8">
+                  {/* Settle Options */}
+                  <div className="terminal-window">
+                    <h4 className="text-lg font-mono font-bold mb-4 text-green-400">
+                      SETTLE OPTION TREE
+                    </h4>
+                    <p className="text-sm mb-4 text-gray-300">
+                      Settle a parent option and all its children at maturity. Can only be done after maturity time.
+                    </p>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-mono mb-2">
+                          Parent Option ID:
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          className="retro-input w-full"
+                          placeholder="Enter parent option ID..."
+                          value={selectedTokenId}
+                          onChange={(e) => setSelectedTokenId(Number(e.target.value))}
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={!isConnected || isSettling || !selectedTokenId}
+                        onClick={async () => {
+                          try {
+                            await settleOptionTree(selectedTokenId);
+                          } catch (error) {
+                            console.error("Settlement failed:", error);
+                          }
+                        }}
+                        className="retro-button-primary w-full py-3 px-6 font-mono"
+                      >
+                        {isSettling ? "SETTLING..." : "SETTLE OPTION TREE"}
+                      </button>
+
+                      {settleHash && (
+                        <div className="terminal-window p-2">
+                          <p className="text-xs break-all text-green-400">
+                            SETTLEMENT TX: {settleHash}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Claim Settlements */}
+                  <div className="terminal-window">
+                    <h4 className="text-lg font-mono font-bold mb-4 text-blue-400">
+                      CLAIM SETTLEMENT
+                    </h4>
+                    <p className="text-sm mb-4 text-gray-300">
+                      Claim your proportional share of collateral for a settled option.
+                    </p>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-mono mb-2">
+                          Option ID to Claim:
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          className="retro-input w-full"
+                          placeholder="Enter option ID to claim..."
+                          value={viewTokenId}
+                          onChange={(e) => setViewTokenId(Number(e.target.value))}
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={!isConnected || isClaiming || !viewTokenId}
+                        onClick={async () => {
+                          try {
+                            await claimSettlement(viewTokenId);
+                          } catch (error) {
+                            console.error("Claim failed:", error);
+                          }
+                        }}
+                        className="retro-button-secondary w-full py-3 px-6 font-mono"
+                      >
+                        {isClaiming ? "CLAIMING..." : "CLAIM SETTLEMENT"}
+                      </button>
+
+                      {claimHash && (
+                        <div className="terminal-window p-2">
+                          <p className="text-xs break-all text-blue-400">
+                            CLAIM TX: {claimHash}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="terminal-window mt-8">
+                  <h4 className="text-lg font-mono font-bold mb-4 text-purple-400">
+                    SETTLEMENT GUIDE
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    <p className="text-gray-300">
+                      1. <span className="text-green-400">SETTLE OPTION TREE</span>: After an option reaches maturity, anyone can settle the parent option and all its children. This locks in the maturity price from the oracle.
+                    </p>
+                    <p className="text-gray-300">
+                      2. <span className="text-blue-400">CLAIM SETTLEMENT</span>: Option holders can then claim their share of the collateral based on their profit/loss.
+                    </p>
+                    <p className="text-gray-300">
+                      3. <span className="text-purple-400">PROFIT DISTRIBUTION</span>: Parent holders get capped profits (limited by child strikes), child holders get uncapped profits.
+                    </p>
+                    <p className="text-gray-300">
+                      4. <span className="text-yellow-400">PROPORTIONAL PAYOUT</span>: If total claims exceed collateral, payouts are distributed proportionally.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 

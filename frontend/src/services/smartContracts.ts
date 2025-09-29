@@ -39,15 +39,15 @@ export function useSmartContracts() {
     }
   };
 
-  // Deployed contract addresses - Updated with newest Citrea testnet deployment
+  // Deployed contract addresses - Updated with PRECONFIGURED Citrea testnet deployment
   const DEPLOYED_CONTRACTS = {
-    TIME_ORACLE: "0x12aece39b96768dc9a776b1b3176b2bc21063314" as const,
-    STABLE_COIN: "0x43d109c41de6beab2e1d151d932bcc6318fa8f50" as const,
-    BITCOIN_TOKEN: "0x70b0efc2b112d37cfeb2641cfde41b8677375935" as const,
-    WETH_TOKEN: "0x52e5d5ff769e71dfeead1a3fc5c440f87031a3e3" as const,
-    BTC_PRICE_FEED: "0x2574b49a1ded38c9f239682769e3c3e708797c7a" as const,
-    ETH_PRICE_FEED: "0x7d0c4127c937aaf59b0af8f686d63d602e27a777" as const,
-    OPTIONS_TRADING: "0xcd9948d810c4e8c2144c4e2fb84786502e6bedc8" as const,
+    TIME_ORACLE: "0xafa1280b7defbe6c70321ed5b83749cdd109ab66" as const,
+    STABLE_COIN: "0xb13c02026c689512cdf6fd9340591c3302e4b7d4" as const,
+    BITCOIN_TOKEN: "0x860d44d746adf177e9e16d42b8f89575eaf7972c" as const,
+    WETH_TOKEN: "0x0afb6f3ccd1d1a895fc30d5ad043e878af649791" as const,
+    BTC_PRICE_FEED: "0xb7e9e806ddf59c0a8f306c36a8ee34fc083a5103" as const,
+    ETH_PRICE_FEED: "0x52768694efbdc3d7cca11c459734631dbb0c4fad" as const,
+    OPTIONS_TRADING: "0xbb7d7115e71f51f537472d268e7345a524ccf055" as const,
   } as const;
 
   // MockERC20 ABI - Exact ABI from compiled contract artifacts
